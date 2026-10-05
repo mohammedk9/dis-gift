@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>حسابي | هدية</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Arabic:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="assets/css/app.css">
+</head>
+<body>
+<header class="nav"><div class="container nav-inner">
+  <a class="brand" href="gift.html">
+    <span class="brand-mark">🎁</span>
+    <span><span class="brand-name">هدية</span><br><span class="brand-sub">حسابي</span></span>
+  </a>
+</div></header>
+<main class="container page" id="app"></main>
+<div id="nav"></div>
+<script src="assets/js/vendor/supabase.js"></script>
+<script type="module">
+import { sb, deviceId, areaId, setArea, dt } from './assets/js/core.js';
+import { $, esc, toast, confirmBox, requireConfig, customerNav } from './assets/js/ui.js';
+
+$('#nav').innerHTML = customerNav('more');
+if (!requireConfig()) throw new Error('not configured');
+
+const { data: areas } = await sb.rpc('active_areas');
+const { data: consents } = await sb.rpc('customer_consents', { p_device: deviceId() });
+
+$('#app').innerHTML = `
+  <div class="page-head">
+    <h1 class="page-title">حسابي</h1>
+    <p class="page-sub">لا نطلب إلا ما نحتاجه لتنفيذ طلبك</p>
+  </div>
+
+  <div class="card">
+    <div class="field"><label class="label">الاسم</label>
+      <input class="input" id="p_name" value="${esc(localStorage.getItem('hg_name') || '')}"></div>
+    <div class="field"><label class="label">رقم الجوال</label>
+      <input class="input" id="p_phone" inputmode="tel"
+        value="${esc(localStorage.getItem('hg_phone') || '')}" placeholder="05xxxxxxxx">
+      <p class="hint">يُشارك مع المطعم فقط عند موافقتك على ذلك في الطلب.</p></div>
+    <div class="field"><label class="label">الحي</label>
+      <select class="input" id="p_area">
+        <option value="">كل بريدة</option>
+        ${(areas || []).map(a => `<option value="${a.id}"
+          ${areaId() === a.id ? 'selected' : ''}>${esc(a.name)}</option>`).join('')}
+      </select></div>
+    <button class="btn btn-primary btn-block" id="saveProfile">حفظ</button>
+  </div>
+
+  <div class="card mt">
+    <h3 class="section-title" style="margin-top:0;font-size:15px">سجل الموافقات</h3>
+    ${(consents || []).length ? (consents || []).map(c => `
+      <div class="between small" style="padding:8px 0;border-bottom:1px solid var(--line)">
+        <span>${esc(c.restaurant || 'المنصة')} ·
+          ${c.type === 'marketing' ? 'تسويق' : 'تواصل بخصوص الطلب'}</span>
+        <span class="badge ${c.status === 'granted' ? 'badge-green' : 'badge-red'}">
+          ${c.status === 'granted' ? 'موافق' : 'مُسحب'}</span>
+      </div>
+      <div class="small muted" style="margin-bottom:8px">
+        ${dt(c.at)} · سياسة ${esc(c.policy_version)}</div>`).join('')
+    : '<p class="small muted">لا توجد موافقات مسجلة بعد.</p>'}
+    <p class="hint">تُسجَّل كل موافقة بنوعها ووقتها ونسخة السياسة.
+      المتطلبات النظامية <span class="badge badge-orange">تحتاج تحققاً رسمياً</span></p>
+  </div>
+
+  <div class="card mt">
+    <h3 class="section-title" style="margin-top:0;font-size:15px">المطعم والإدارة</h3>
+    <a class="btn btn-ghost btn-block mb" href="login.html?next=/r/">دخول المطعم</a>
+    <a class="btn btn-ghost btn-block" href="login.html?next=/admin/">دخول الإدارة</a>
+  </div>
+
+  <div class="card mt">
+    <button class="btn btn-red btn-block" id="reset">مسح بيانات هذا الجهاز</button>
+    <p class="hint center">سيمسح الطلبات المحلية والهدية المخزنة على هذا المتصفح فقط.</p>
+  </div>`;
+
+$('#saveProfile').onclick = () => {
+  localStorage.setItem('hg_name', $('#p_name').value.trim());
+  localStorage.setItem('hg_phone', $('#p_phone').value.trim());
+  setArea($('#p_area').value);
+  toast('✅ تم الحفظ');
+};
+
+$('#reset').onclick = async () => {
+  if (!await confirmBox('مسح البيانات؟',
+    'سيتم مسح الطلبات والهدية المحفوظة على هذا المتصفح.', 'مسح')) return;
+  ['hg_cart','hg_gift','hg_name','hg_phone','hg_addr','hg_area'].forEach(k => localStorage.removeItem(k));
+  toast('تم المسح');
+  setTimeout(() => location.href = 'gift.html', 500);
+};
+</script>
+</body>
+</html>

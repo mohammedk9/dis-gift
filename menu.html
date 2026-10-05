@@ -1,0 +1,157 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>المنيو | هدية</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Arabic:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="assets/css/app.css">
+</head>
+<body>
+<header class="nav"><div class="container nav-inner">
+  <a class="brand" href="gift.html">
+    <span class="brand-mark">🎁</span>
+    <span><span class="brand-name">هدية</span><br><span class="brand-sub">اكتشف · اطلب</span></span>
+  </a>
+  <span class="nav-spacer"></span>
+  <span class="badge badge-orange" id="discBadge"></span>
+</div></header>
+
+<main class="container page" id="app"></main>
+<div id="cartbar"></div>
+<script src="assets/js/vendor/supabase.js"></script>
+<script type="module">
+import { sb, deviceId, getGift, getCart, setQty, cartTotal, sar } from './assets/js/core.js';
+import { $, esc, toast, requireConfig, customerNav } from './assets/js/ui.js';
+
+document.body.insertAdjacentHTML('beforeend', customerNav('gift'));
+if (!requireConfig()) throw new Error('not configured');
+
+const gift = getGift();
+if (!gift) { location.replace('gift.html'); throw new Error('no gift'); }
+
+const rid = gift.restaurant.id;
+$('#discBadge').textContent = `خصم ${gift.gift.discount}%`;
+
+const { data: menu } = await sb.rpc('restaurant_menu', { p_restaurant: rid });
+if (!menu?.restaurant) {
+  $('#app').innerHTML = `<div class="empty"><div class="empty-ico">🍽️</div>
+    <p>هذا المطعم غير متاح حالياً.</p>
+    <a class="btn btn-ghost mt" href="gift.html">العودة للهدية</a></div>`;
+  throw new Error('no restaurant');
+}
+
+sb.rpc('log_event', {
+  p_type: 'menu_view', p_device: deviceId(), p_restaurant: rid, p_gift: gift.gift.id
+}).catch(() => {});
+
+const R = menu.restaurant;
+$('#app').innerHTML = `
+  <div class="card card-tight mt">
+    <div class="flex" style="gap:12px;align-items:center">
+      ${R.logo_url ? `<img src="${esc(R.logo_url)}" alt=""
+        style="width:58px;height:58px;border-radius:15px;object-fit:cover;flex:none">`
+        : `<div style="width:58px;height:58px;border-radius:15px;background:var(--peach);
+          color:var(--orange-deep);display:grid;place-items:center;font-size:26px;flex:none">🍽️</div>`}
+      <div class="grow">
+        <div style="font-weight:700;font-size:17px">${esc(R.name)}</div>
+        <div class="small muted">${esc(R.address || 'بريدة')}</div>
+        <div class="flex" style="gap:6px;margin-top:5px;flex-wrap:wrap">
+          ${R.pickup_enabled ? '<span class="badge badge-green">استلام</span>' : ''}
+          ${R.delivery_enabled ? '<span class="badge badge-blue">توصيل المطعم</span>' : ''}
+          <span class="badge">~${esc(R.prep_time_min)} دقيقة</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div id="menu"></div>`;
+
+const menuEl = $('#menu');
+menuEl.innerHTML = menu.categories.length ? menu.categories.map(c => (
+  !c.items.length ? '' : `
+  <div class="mcat">
+    <h3 class="mcat-name">${esc(c.name)}</h3>
+    ${c.items.map(it => `
+      <div class="mitem ${it.is_available ? '' : 'out'}" data-id="${it.id}">
+        ${it.image_url ? `<img src="${esc(it.image_url)}" alt=""
+          style="width:52px;height:52px;border-radius:12px;object-fit:cover;flex:none">` : ''}
+        <div class="mitem-info">
+          <p class="mitem-name">${esc(it.name)}</p>
+          ${it.description ? `<p class="mitem-desc">${esc(it.description)}</p>` : ''}
+          <div class="mitem-price">${sar(it.price)}</div>
+        </div>
+        <div class="qty" data-q="${it.id}">${qtyHtml(it.id)}</div>
+      </div>`).join('')}
+  </div>`)).join('')
+  : '<div class="empty"><div class="empty-ico">📋</div><p>لا يوجد منيو متاح حالياً.</p></div>';
+
+function qtyHtml(id) {
+  const it = getCart().find(x => x.id === id);
+  return it ? `<button data-act="dec">−</button><span>${it.qty}</span><button data-act="inc">+</button>`
+            : `<button data-act="add">＋ إضافة</button>`;
+}
+
+/* ---------- تفاعل السلة ---------- */
+const ALL = menu.categories.flatMap(c => c.items);
+let loggedCart = false;
+
+menuEl.addEventListener('click', async e => {
+  const btn = e.target.closest('button[data-act]');
+  if (!btn) return;
+  const qbox = btn.closest('.qty');
+  const id = qbox.dataset.q;
+  const act = btn.dataset.act;
+  const src = ALL.find(x => x.id === id);
+  if (!src?.is_available) return toast('هذا الصنف غير متوفر حالياً');
+
+  if (act === 'dec') {
+    setQty(id, (getCart().find(x => x.id === id)?.qty || 0) - 1);
+  } else {
+    const list = getCart();
+    const cur = list.find(x => x.id === id);
+    if (cur) cur.qty += 1; else list.push({ ...src, qty: 1 });
+    localStorage.setItem('hg_cart', JSON.stringify(list));
+  }
+
+  qbox.innerHTML = qtyHtml(id);
+  renderBar();
+
+  if (!loggedCart && getCart().length) {
+    loggedCart = true;
+    sb.rpc('log_event', {
+      p_type: 'cart_created', p_device: deviceId(), p_restaurant: rid, p_gift: gift.gift.id
+    }).catch(() => {});
+  }
+});
+
+function renderBar() {
+  const c = getCart();
+  const el = $('#cartbar');
+  if (!c.length) { el.innerHTML = ''; return; }
+  el.innerHTML = `<div class="cart-bar">
+    <div class="grow">
+      <div class="sub">${c.reduce((s,i)=>s+i.qty,0)} صنف · خصم ${esc(gift.gift.discount)}%</div>
+      <div class="total">${sar(cartTotal())}</div>
+    </div>
+    <button class="btn btn-primary" id="checkout">إتمام الطلب</button>
+  </div>`;
+  $('#checkout').onclick = () => { location.href = 'checkout.html'; };
+}
+renderBar();
+</script>
+</body>
+</html>
+        </div>
+        <div class="qty" data-q="${it.id}">${qtyHtml(it.id)}</div>
+      </div>`).join('')}
+  </div>`)).join('')
+  : '<div class="empty"><div class="empty-ico">📋</div><p>لا يوجد منيو متاح حالياً.</p></div>';
+
+function qtyHtml(id) {
+  const it = getCart().find(x => x.id === id);
+  return it ? `<button data-act="dec">−</button><span>${it.qty}</span><button data-act="inc">+</button>`
+            : `<button data-act="add">＋ إضافة</button>`;
+}

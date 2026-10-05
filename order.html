@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>حالة الطلب | هدية</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Arabic:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="assets/css/app.css">
+</head>
+<body>
+<header class="nav"><div class="container nav-inner">
+  <a class="brand" href="orders.html">
+    <span class="brand-mark">🎁</span>
+    <span><span class="brand-name">هدية</span><br><span class="brand-sub">حالة الطلب</span></span>
+  </a>
+  <span class="nav-spacer"></span>
+  <span class="badge" id="stBadge">…</span>
+</div></header>
+<main class="container page" id="app"></main>
+<script src="assets/js/vendor/supabase.js"></script>
+<script type="module">
+import { sb, deviceId, sar, dt, STATUS_AR, STATUS_CLASS } from './assets/js/core.js';
+import { $, esc, requireConfig, customerNav } from './assets/js/ui.js';
+
+document.body.insertAdjacentHTML('beforeend', customerNav('orders'));
+if (!requireConfig()) throw new Error('not configured');
+
+const code = new URLSearchParams(location.search).get('code');
+const STEPS = [['new','تم الإرسال'], ['accepted','قبل المطعم'], ['preparing','قيد التجهيز'],
+               ['ready','جاهز'], ['completed','مكتمل']];
+
+async function load() {
+  if (!code) { location.replace('orders.html'); return; }
+  const { data } = await sb.rpc('customer_order', { p_device: deviceId(), p_code: code });
+  if (!data?.ok) {
+    $('#app').innerHTML = `<div class="empty"><div class="empty-ico">🔍</div>
+      <p>لم نعثر على هذا الطلب.</p>
+      <a class="btn btn-ghost mt" href="orders.html">طلباتي</a></div>`;
+    return;
+  }
+  const o = data.order, r = data.restaurant;
+  const idx = STEPS.findIndex(s => s[0] === o.status);
+  const dead = ['cancelled','no_show'].includes(o.status);
+
+  $('#stBadge').textContent = STATUS_AR[o.status];
+  $('#stBadge').className = 'badge ' + (STATUS_CLASS[o.status] || '');
+
+  $('#app').innerHTML = `
+    <div class="page-head">
+      <h1 class="page-title">طلب <span dir="ltr">#${esc(o.code)}</span></h1>
+      <p class="page-sub">${dt(o.created_at)}</p>
+    </div>
+
+    ${dead ? `<div class="alert alert-error">هذا الطلب ${STATUS_AR[o.status]} — لا توجد رسوم منصة عليه.</div>`
+      : `<div class="card">
+        ${STEPS.map((s, i) => `<div class="tl-item ${i <= idx ? 'done' : ''}">
+          <div class="tl-t">${s[1]}</div>
+          <div class="tl-d">${i === idx ? 'الحالة الآن' : ''}</div>
+        </div>`).join('')}
+      </div>`}
+
+    <div class="card mt">
+      <div class="between"><span>المطعم</span><span style="font-weight:600">${esc(r.name)}</span></div>
+      <div class="between small muted"><span>طريقة الاستلام</span>
+        <span>${o.order_type === 'pickup' ? 'استلام من المطعم' : 'توصيل المطعم'}</span></div>
+      ${o.pickup_slot ? `<div class="between small muted"><span>وقت الاستلام</span>
+        <span dir="ltr">${esc(o.pickup_slot)}</span></div>` : ''}
+      ${o.address ? `<div class="between small muted"><span>العنوان</span>
+        <span>${esc(o.address)}</span></div>` : ''}
+      ${r.phone ? `<a class="btn btn-ghost btn-block mt" href="tel:${esc(r.phone)}"
+        >📞 اتصال بالمطعم</a>` : ''}
+    </div>
+
+    <div class="card mt">
+      <h3 class="section-title" style="margin-top:0;font-size:15px">الأصناف</h3>
+      ${o.items.map(i => `<div class="between small" style="padding:6px 0">
+        <span>${esc(i.name)} × ${i.qty}</span><span>${sar(i.line_total)}</span></div>`).join('')}
+      <div style="height:1px;background:var(--line);margin:10px 0"></div>
+      <div class="between small muted"><span>الإجمالي</span><span>${sar(o.subtotal)}</span></div>
+      <div class="between small" style="color:var(--orange-deep)">
+        <span>الخصم</span><span>− ${sar(o.discount)}</span></div>
+      <div class="between" style="font-weight:700;margin-top:8px">
+        <span>المطلوب دفعه للمطعم</span><span>${sar(o.total)}</span></div>
+      <div class="alert alert-info mt mb">💵 ${esc(o.payment_note)}</div>
+      ${o.note ? `<p class="small muted">ملاحظتك: ${esc(o.note)}</p>` : ''}
+    </div>
+
+    ${data.timeline.length ? `<div class="card mt">
+      <h3 class="section-title" style="margin-top:0;font-size:15px">سجل الطلب</h3>
+      <div class="timeline">
+        ${data.timeline.map(t => `<div class="tl-item done">
+          <div class="tl-t">${STATUS_AR[t.status] || t.status}</div>
+          <div class="tl-d">${dt(t.at)}${t.note ? ' · ' + esc(t.note) : ''}</div>
+        </div>`).join('')}
+      </div></div>` : ''}`;
+
+  if (!dead && !['completed'].includes(o.status)) setTimeout(load, 12000);
+}
+
+await load();
+</script>
+</body>
+</html>

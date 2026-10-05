@@ -1,0 +1,121 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>لوحة الإدارة | هدية</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Arabic:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../assets/css/app.css">
+</head>
+<body>
+<header class="nav"><div class="container nav-inner">
+  <a class="brand" href="/index.html"><span class="brand-mark">🎁</span>
+    <span><span class="brand-name">هدية</span><br><span class="brand-sub">الإدارة</span></span></a>
+  <span class="nav-spacer"></span>
+  <button class="btn btn-ghost btn-sm" id="logout">خروج</button>
+</div></header>
+<div id="tabs"></div>
+<main class="container" id="app" style="padding-bottom:40px"></main>
+<script src="../assets/js/vendor/supabase.js"></script>
+<script type="module">
+import { sb, sar, pct } from '../assets/js/core.js';
+import { $, esc, requireConfig, guardAdmin } from '../assets/js/ui.js';
+
+if (!requireConfig()) throw new Error('not configured');
+if (!await guardAdmin()) throw new Error('unauthorized');
+
+$('#logout').onclick = async () => { await sb.auth.signOut(); location.href = '/login.html'; };
+
+$('#tabs').innerHTML = `<div class="container"><div class="tabs">
+  ${[['d','المؤشرات','/admin/'],['r','المطاعم','/admin/restaurants.html'],
+     ['o','الطلبات','/admin/orders.html'],['f','العروض','/admin/offers.html'],
+     ['l','دفتر الحسابات','/admin/ledger.html'],['s','كشوف الحساب','/admin/statements.html'],
+     ['g','الإعدادات','/admin/settings.html']].map(([k,l,h]) =>
+    `<a class="tab ${k==='d'?'active':''}" href="${h}">${l}</a>`).join('')}
+</div></div>`;
+
+let days = Number(new URLSearchParams(location.search).get('d') || 30);
+const { data: d } = await sb.rpc('admin_kpis', { p_days: days });
+if (!d?.ok) { $('#app').innerHTML = '<div class="empty">تعذّر تحميل المؤشرات</div>'; throw 0; }
+
+const ns = d.north_star, f = d.funnel, c = d.customer, r = d.restaurant, e = d.economics;
+
+$('#app').innerHTML = `
+  <div class="page-head">
+    <h1 class="page-title">المؤشرات</h1>
+    <p class="page-sub">آخر ${days} يوماً — بدون أي أرقام مرجعية مُفترضة</p>
+  </div>
+
+  <div class="tabs">
+    ${[7, 30, 90].map(x => `<a class="tab ${days === x ? 'active' : ''}"
+      href="?d=${x}">${x} يوم</a>`).join('')}
+  </div>
+
+  <div class="card" style="background:linear-gradient(135deg,#f59653,#e5551f);color:#fff;border:0">
+    <div class="small" style="opacity:.9">North Star Metric</div>
+    <div style="font-size:15px;font-weight:600;margin-top:2px">
+      Completed Orders Generated Per Gift</div>
+    <div style="font-size:44px;font-weight:700;line-height:1.15;letter-spacing:-1.5px">
+      ${(ns.value * 100).toFixed(1)}%</div>
+    <div class="small" style="opacity:.9">
+      ${ns.completed_orders} طلب مكتمل ÷ ${ns.gifts_opened} هدية مفتوحة</div>
+    <div class="small mt" style="opacity:.85">السؤال: كم هدية مفتوحة تنتج طلباً مكتملاً؟</div>
+  </div>
+
+  <h2 class="section-title">مسار التحويل</h2>
+  <div class="card">
+    ${[['🎁 هدية مفتوحة', f.gift_open, null],
+       ['👁️ مشاهدة منيو', f.menu_view, f.gift_to_menu],
+       ['🛒 سلة', f.cart_created, f.menu_to_cart],
+       ['📋 طلب', f.order_created, f.cart_to_order],
+       ['✅ طلب مكتمل', f.order_completed, f.order_to_completed]].map(([l, v, r2]) => `
+      <div class="between" style="padding:7px 0">
+        <span class="small">${l}</span>
+        <span><b>${v}</b>${r2 !== null ? ` <span class="small muted">(${pct(r2)})</span>` : ''}</span>
+      </div>`).join('')}
+  </div>
+
+  <h2 class="section-title">العملاء</h2>
+  <div class="stats">
+    <div class="stat"><div class="stat-k">نشط اليوم</div><div class="stat-v">${c.dau}</div></div>
+    <div class="stat"><div class="stat-k">أجهزة نشطة</div><div class="stat-v">${c.devices_total}</div></div>
+    <div class="stat"><div class="stat-k">أجهزة طلبت</div><div class="stat-v">${c.devices_ordered}</div></div>
+    <div class="stat"><div class="stat-k">طلبات مكتملة</div>
+      <div class="stat-v">${e.completed_orders}</div></div>
+  </div>
+
+  <h2 class="section-title">المطاعم</h2>
+  <div class="stats">
+    <div class="stat"><div class="stat-k">نشط</div><div class="stat-v">${r.active}</div></div>
+    <div class="stat"><div class="stat-k">بانتظار التفعيل</div><div class="stat-v">${r.pending}</div></div>
+    <div class="stat"><div class="stat-k">ينشئ عروضاً</div><div class="stat-v">${r.creating_offers}</div></div>
+    <div class="stat"><div class="stat-k">يستقبل طلبات</div><div class="stat-v">${r.receiving_orders}</div></div>
+    <div class="stat"><div class="stat-k">مطعم عائد</div><div class="stat-v">${r.returning}</div></div>
+  </div>
+  <p class="hint">«مطعم عائد» = أتمّ أكثر من طلب مكتمل واحد خلال الفترة.</p>
+
+  <h2 class="section-title">الاقتصاديات</h2>
+  <div class="card">
+    <div class="between"><span class="small">إيراد المنصة (رسوم مكتملة)</span>
+      <b style="color:var(--orange-deep)">${sar(e.revenue)}</b></div>
+    <div class="between mt"><span class="small">متوسط الرسوم على الطلب المكتمل</span>
+      <b>${sar(e.avg_platform_fee)}</b></div>
+    <div class="between mt"><span class="small">الإيراد لكل طلب مكتمل</span>
+      <b>${sar(e.revenue_per_completed_order)}</b></div>
+    <p class="hint">قيمة الرسوم الحالية مضبوطة من صفحة الإعدادات.
+      جرّب أكثر من نموذج تسعير وقيّم الفرق على عدد الطلبات المكتملة.</p>
+  </div>
+
+  <h2 class="section-title">الأسئلة التي نختبرها</h2>
+  <div class="card">
+    <p class="small"><b>1) هل تفتح هدية الخصم طلباً مكتملاً؟</b><br>
+      North Star أعلاه هو الجواب.</p>
+    <p class="small mt"><b>2) هل يدفع المطعم رسوماً ثابتة على الطلب المكتمل؟</b><br>
+      تابع «رسوم مستحقة» في كشف الحساب وتقارير المطعمين. إن رفضوا الدفع عند أي قيمة،
+      يجب تغيير نموذج الإيرادات قبل بناء أي ميزة جديدة.</p>
+  </div>`;
+</script>
+</body>
+</html>

@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>الطلبات | الإدارة</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Arabic:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../assets/css/app.css">
+</head>
+<body>
+<header class="nav"><div class="container nav-inner">
+  <a class="brand" href="/admin/"><span class="brand-mark">🎁</span>
+    <span><span class="brand-name">هدية</span><br><span class="brand-sub">الطلبات</span></span></a>
+</div></header>
+<div id="tabs"></div>
+<main class="container" id="app" style="padding-bottom:40px"></main>
+<script src="../assets/js/vendor/supabase.js"></script>
+<script type="module">
+import { sb, sar, dt, STATUS_AR, STATUS_CLASS } from '../assets/js/core.js';
+import { $, esc, requireConfig, guardAdmin } from '../assets/js/ui.js';
+
+if (!requireConfig()) throw new Error('not configured');
+if (!await guardAdmin()) throw new Error('unauthorized');
+
+$('#tabs').innerHTML = `<div class="container"><div class="tabs">
+  ${[['d','المؤشرات','/admin/'],['r','المطاعم','/admin/restaurants.html'],
+     ['o','الطلبات','/admin/orders.html'],['f','العروض','/admin/offers.html'],
+     ['l','دفتر الحسابات','/admin/ledger.html'],['s','كشوف الحساب','/admin/statements.html'],
+     ['g','الإعدادات','/admin/settings.html']].map(([k,l,h]) =>
+    `<a class="tab ${k==='o'?'active':''}" href="${h}">${l}</a>`).join('')}
+</div></div>`;
+
+const filter = new URLSearchParams(location.search).get('f') || '';
+const { data } = await sb.rpc('admin_orders', { p_status: filter || null });
+const list = data?.orders || [];
+
+const stats = {
+  total: list.reduce((s, o) => s + Number(o.total), 0),
+  fees: list.reduce((s, o) => s + Number(o.platform_fee), 0),
+  completed: list.filter(o => o.status === 'completed').length
+};
+
+$('#app').innerHTML = `
+  <div class="page-head"><h1 class="page-title">الطلبات</h1>
+    <p class="page-sub">${list.length} طلب</p></div>
+
+  <div class="tabs">
+    ${[['','الكل'],['new','جديدة'],['accepted','مقبولة'],['preparing','تجهيز'],
+       ['ready','جاهزة'],['completed','مكتملة'],['cancelled','ملغاة'],
+       ['no_show','لم يحضروا']].map(([k, l]) =>
+      `<a class="tab ${filter === k ? 'active' : ''}" href="?f=${k}">${l}</a>`).join('')}
+  </div>
+
+  <div class="stats mb">
+    <div class="stat"><div class="stat-k">إجمالي القيمة</div><div class="stat-v">${sar(stats.total)}</div></div>
+    <div class="stat"><div class="stat-k">مكتملة</div><div class="stat-v">${stats.completed}</div></div>
+    <div class="stat"><div class="stat-k">رسوم المنصة</div>
+      <div class="stat-v" style="color:var(--orange-deep)">${sar(stats.fees)}</div></div>
+    <div class="stat"><div class="stat-k">غير مكتملة</div>
+      <div class="stat-v">${list.length - stats.completed}</div></div>
+  </div>
+
+  <div class="card" style="padding:0">
+    <div class="table-wrap"><table>
+      <thead><tr><th>الطلب</th><th>المطعم</th><th>الحالة</th><th>النوع</th>
+        <th>الإجمالي</th><th>الخصم</th><th>الرسوم</th><th>التاريخ</th></tr></thead>
+      <tbody>
+        ${list.map(o => `<tr>
+          <td><b>#${esc(o.code)}</b></td>
+          <td>${esc(o.restaurant)}</td>
+          <td><span class="badge ${STATUS_CLASS[o.status] || ''}">${STATUS_AR[o.status]}</span></td>
+          <td>${o.order_type === 'pickup' ? 'استلام' : 'توصيل'}</td>
+          <td>${sar(o.total)}</td>
+          <td>${sar(o.discount)}</td>
+          <td>${o.status === 'completed' ? sar(o.platform_fee) : '—'}</td>
+          <td class="muted">${dt(o.created_at)}</td>
+        </tr>`).join('') || '<tr><td colspan="8" class="center muted">لا توجد طلبات</td></tr>'}
+      </tbody>
+    </table></div>
+  </div>
+
+  <p class="hint mt">الرسوم تظهر فقط للطلبات المكتملة.
+    الطلبات الملغاة أو التي لم يكتملها المطعم لا تنتج أي رسوم.</p>`;
+</script>
+</body>
+</html>

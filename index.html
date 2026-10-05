@@ -1,0 +1,441 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>هدية | اكتشف. اطلب. استمتع</title>
+<link rel="stylesheet" href="assets/css/app.css">
+<link rel="manifest" href="manifest.webmanifest">
+<meta name="theme-color" content="#e86a33">
+<meta name="description" content="هدية اليوم — اكتشف عرضاً يومياً من مطعم قريب منك في بريدة، واطلب مباشرة من المطعم." />
+<link rel="icon" href="assets/icon.svg" type="image/svg+xml">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Arabic:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --orange:        #e86a33;
+    --orange-deep:   #e2551f;
+    --orange-light:  #f5934f;
+    --peach:         #fdedE3;
+    --peach-2:       #fbe4d3;
+    --ink:           #16120f;
+    --ink-soft:      #3a332e;
+    --muted:         #8d837a;
+    --muted-2:       #a49a90;
+    --line:          #ece6dd;
+    --cream:         #fbf7f0;
+    --gray-pill:     #f2eee8;
+    --radius:        22px;
+    --shadow-sm:     0 1px 2px rgba(22,18,15,.04), 0 10px 30px -16px rgba(22,18,15,.14);
+  }
+
+  *{box-sizing:border-box}
+  html,body{margin:0;padding:0}
+  body{
+    font-family:"IBM Plex Sans Arabic","Cairo","Segoe UI",Tahoma,system-ui,-apple-system,sans-serif;
+    background:#fff;
+    color:var(--ink);
+    line-height:1.6;
+    -webkit-font-smoothing:antialiased;
+    text-rendering:optimizeLegibility;
+  }
+  .container{width:100%;max-width:1248px;margin-inline:auto;padding-inline:24px}
+
+  /* ============ NAVBAR ============ */
+  .nav{
+    position:sticky;top:0;z-index:60;
+    background:rgba(255,255,255,.92);
+    backdrop-filter:saturate(180%) blur(12px);
+    border-bottom:1px solid #f2ede5;
+  }
+  .nav-inner{display:flex;align-items:center;gap:20px;height:74px}
+
+  .brand{display:flex;align-items:center;gap:12px;text-decoration:none;color:inherit;flex:none}
+  .brand-mark{
+    width:44px;height:44px;border-radius:50%;
+    background:linear-gradient(140deg,var(--orange-light),var(--orange-deep));
+    display:grid;place-items:center;color:#fff;
+    box-shadow:0 10px 20px -10px rgba(226,85,31,.75);
+  }
+  .brand-name{font-size:20px;font-weight:700;line-height:1.15;letter-spacing:-.2px}
+  .brand-tag{font-size:11px;color:var(--muted-2);line-height:1.4}
+
+  .nav-links{display:flex;align-items:center;gap:6px;margin-inline:auto}
+  .nav-links a{
+    text-decoration:none;color:#5b534c;font-size:15.5px;font-weight:500;
+    padding:9px 14px;border-radius:999px;transition:.2s;
+  }
+  .nav-links a:hover{background:#f6f2ec;color:var(--ink)}
+  .nav-links a.active{background:var(--ink);color:#fff;font-weight:600;padding:10px 20px}
+
+  .nav-actions{display:flex;align-items:center;gap:10px;flex:none}
+  .chip-city{
+    display:inline-flex;align-items:center;gap:7px;
+    background:#f4f1ec;border:1px solid #e9e4dc;color:#6b625a;
+    font:inherit;font-size:13.5px;padding:8px 14px;border-radius:999px;cursor:pointer;
+  }
+  .chip-city svg{color:var(--orange)}
+  .icon-btn{
+    width:42px;height:42px;border-radius:50%;display:grid;place-items:center;
+    background:#fff;border:1px solid #eae5dd;color:#5b534c;cursor:pointer;transition:.2s;
+  }
+  .icon-btn:hover{border-color:#dbd3c8;color:var(--ink)}
+  .avatar{
+    width:42px;height:42px;border-radius:50%;border:0;cursor:pointer;
+    background:var(--ink);color:#fff;font:inherit;font-weight:600;font-size:16px;
+  }
+  .nav-toggle{display:none;background:none;border:0;cursor:pointer;color:var(--ink);padding:6px}
+
+  /* ============ HERO ============ */
+  .hero{
+    position:relative;overflow:hidden;
+    background:var(--cream);
+    padding:64px 0 62px;
+  }
+  .hero::before{ /* دائرة زخرفية خفيفة */
+    content:"";position:absolute;width:920px;height:920px;border-radius:50%;
+    border:1px solid rgba(226,150,100,.14);
+    left:-180px;top:-190px;pointer-events:none;
+  }
+  .hero::after{ /* توهج دافئ */
+    content:"";position:absolute;width:760px;height:760px;border-radius:50%;
+    background:radial-gradient(circle,rgba(235,120,60,.10),rgba(235,120,60,0) 62%);
+    left:-120px;top:-160px;pointer-events:none;
+  }
+  .hero-grid{
+    position:relative;z-index:2;
+    display:flex;align-items:center;justify-content:space-between;gap:80px;flex-wrap:wrap;
+  }
+
+  .hero-copy{max-width:570px}
+  .badge{
+    display:inline-flex;align-items:center;gap:8px;
+    background:var(--peach);color:var(--orange-deep);
+    font-size:13.5px;font-weight:600;
+    padding:8px 15px;border-radius:999px;
+  }
+  h1{
+    font-size:clamp(30px,4.2vw,54px);
+    line-height:1.34;font-weight:700;letter-spacing:-.6px;
+    margin:22px 0 0;
+  }
+  h1 .hl{color:var(--orange)}
+  .lead{
+    max-width:520px;margin:18px 0 0;
+    color:var(--muted);font-size:16px;line-height:2.05;font-weight:400;
+  }
+  .mini-pill{
+    display:inline-flex;align-items:center;gap:8px;margin-top:26px;
+    background:var(--gray-pill);color:var(--muted);
+    font-size:12.5px;padding:8px 15px;border-radius:999px;
+  }
+  .mini-pill b{color:#6f665e;font-weight:600}
+
+  /* بطاقة الهدية */
+  .gift-card{
+    position:relative;width:448px;max-width:100%;flex:none;
+    background:linear-gradient(135deg,#f59653 0%,#ef6a2f 48%,#e5551f 100%);
+    border-radius:28px;color:#fff;
+    padding:24px 27px 22px;
+    display:flex;flex-direction:column;align-items:center;text-align:center;
+    box-shadow:0 30px 70px -26px rgba(226,96,40,.55);
+  }
+  .gc-top{
+    width:100%;display:flex;align-items:flex-start;justify-content:space-between;
+  }
+  .gc-icon{color:#fff;opacity:.95}
+  .gc-num{
+    background:rgba(255,255,255,.22);border-radius:999px;
+    font-size:12.5px;font-weight:500;padding:7px 13px;direction:rtl;
+  }
+  .gc-box{
+    width:96px;height:96px;border-radius:24px;margin-top:22px;
+    background:rgba(255,255,255,.18);
+    display:grid;place-items:center;color:#fff;
+  }
+  .gc-sub{margin-top:26px;font-size:14.5px;color:rgba(255,255,255,.85);font-weight:400}
+  .gc-title{margin-top:2px;font-size:25px;font-weight:700;letter-spacing:-.3px}
+  .gc-cta{
+    margin-top:24px;display:inline-flex;align-items:center;gap:9px;
+    background:#fff;color:var(--orange-deep);
+    border:0;border-radius:14px;padding:13px 24px;cursor:pointer;
+    font:inherit;font-size:15px;font-weight:600;
+    box-shadow:0 10px 24px -10px rgba(0,0,0,.35);transition:.2s;
+  }
+  .gc-cta:hover{transform:translateY(-2px);box-shadow:0 14px 28px -12px rgba(0,0,0,.4)}
+  .gc-line{width:100%;height:1px;background:rgba(255,255,255,.28);margin:26px 0 16px}
+  .gc-foot{
+    width:100%;display:flex;justify-content:space-between;
+    font-size:12px;color:rgba(255,255,255,.8);
+  }
+
+  .divider{height:1px;background:var(--line);border:0;margin:0}
+
+  /* ============ FEATURES ============ */
+  .features{padding:34px 0 8px}
+  .features-grid{
+    display:grid;grid-template-columns:repeat(3,1fr);gap:24px;
+  }
+  .f-card{
+    background:#fff;border:1px solid #f0ebe3;border-radius:20px;
+    padding:20px 22px;display:flex;align-items:center;gap:16px;
+    box-shadow:var(--shadow-sm);transition:.22s;
+  }
+  .f-card:hover{transform:translateY(-3px);box-shadow:0 16px 34px -20px rgba(22,18,15,.3)}
+  .f-ico{
+    flex:none;width:46px;height:46px;border-radius:14px;
+    background:var(--peach);color:var(--orange-deep);
+    display:grid;place-items:center;
+  }
+  .f-txt{min-width:0}
+  .f-title{font-size:15.5px;font-weight:600;margin:0;line-height:1.5}
+  .f-desc{margin:2px 0 0;font-size:12.5px;color:var(--muted);line-height:1.7}
+
+  /* ============ RESTAURANTS ============ */
+  .restaurants{padding:46px 0 90px}
+  .rest-row{
+    display:flex;align-items:flex-end;justify-content:space-between;gap:24px;flex-wrap:wrap;
+  }
+  .eyebrow{color:var(--orange);font-size:13px;font-weight:600;margin:0 0 4px}
+  .rest-title{font-size:26px;font-weight:700;letter-spacing:-.4px;margin:0}
+  .rest-actions{display:flex;gap:12px}
+  .btn{
+    display:inline-flex;align-items:center;gap:9px;border-radius:12px;
+    padding:12px 18px;font:inherit;font-size:14.5px;font-weight:600;cursor:pointer;
+    text-decoration:none;transition:.2s;
+  }
+  .btn-outline{background:#fff;color:#241f1a;border:1px solid #e7e1d8}
+  .btn-outline:hover{border-color:#cfc5b8;background:#fdfbf8}
+  .btn-dark{background:var(--ink);color:#fff;border:1px solid var(--ink)}
+  .btn-dark:hover{background:#2a231d}
+
+  a:focus-visible,button:focus-visible{outline:2px solid var(--orange);outline-offset:3px;border-radius:10px}
+
+  /* ============ RESPONSIVE ============ */
+  @media (max-width:1024px){
+    .hero-grid{gap:48px;justify-content:center}
+    .hero-copy{max-width:640px;order:2}
+    .gift-card{order:1;width:420px}
+    .features-grid{grid-template-columns:1fr 1fr}
+  }
+  @media (max-width:760px){
+    .nav-links,.chip-city{display:none}
+    .nav-toggle{display:block}
+    .nav-inner{height:66px}
+    .nav-links.open{
+      display:flex;position:absolute;inset-inline:0;top:66px;flex-direction:column;
+      background:#fff;padding:14px 24px 20px;border-bottom:1px solid #f2ede5;
+      margin:0;gap:2px;box-shadow:0 18px 30px -24px rgba(0,0,0,.4);
+    }
+    .hero{padding:40px 0 44px}
+    .gift-card{width:100%;padding:22px 20px}
+    .features-grid{grid-template-columns:1fr;gap:14px}
+    .rest-actions{width:100%}
+    .rest-actions .btn{flex:1;justify-content:center}
+  }
+</style>
+</head>
+<body>
+
+<!-- ================= NAVBAR ================= -->
+<header class="nav">
+  <div class="container nav-inner">
+    <a class="brand" href="#">
+      <span class="brand-mark" aria-hidden="true">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+          <rect x="3" y="8" width="18" height="4" rx="1"/><path d="M12 8v13"/>
+          <path d="M19 12v7a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2v-7"/>
+          <path d="M7.5 8a2.5 2.5 0 0 1 0-5C11 3 12 8 12 8s1-5 4.5-5a2.5 2.5 0 0 1 0 5"/>
+        </svg>
+      </span>
+      <span>
+        <span class="brand-name">هدية</span>
+        <span class="brand-tag">اكتشف. اطلب. استمتع</span>
+      </span>
+    </a>
+
+    <nav class="nav-links" id="navLinks">
+      <a class="active" href="gift.html">اكتشف</a>
+      <a href="gift.html">الطعام</a>
+      <a href="orders.html">طلباتي</a>
+    </nav>
+
+    <div class="nav-actions">
+      <button class="chip-city" type="button" onclick="location.href='gift.html'">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z"/><circle cx="12" cy="10" r="3"/>
+        </svg>
+        بريدة
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></svg>
+      </button>
+
+      <button class="icon-btn" type="button" aria-label="الإشعارات"
+        onclick="location.href='notices.html'">
+        <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"/>
+        </svg>
+      </button>
+
+      <button class="avatar" type="button" aria-label="حسابي"
+              onclick="location.href='account.html'">س</button>
+
+      <button class="nav-toggle" id="navToggle" type="button" aria-label="القائمة">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 7h16M4 12h16M4 17h16"/></svg>
+      </button>
+    </div>
+  </div>
+</header>
+
+<!-- ================= HERO ================= -->
+<section class="hero">
+  <div class="container hero-grid">
+
+    <!-- النص (يمين في RTL) -->
+    <div class="hero-copy">
+      <span class="badge">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+          <rect x="3" y="8" width="18" height="4" rx="1"/><path d="M12 8v13"/>
+          <path d="M19 12v7a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2v-7"/>
+          <path d="M7.5 8a2.5 2.5 0 0 1 0-5C11 3 12 8 12 8s1-5 4.5-5a2.5 2.5 0 0 1 0 5"/>
+        </svg>
+        هدية اليوم
+      </span>
+
+      <h1>كل يوم، <span class="hl">هدية</span><br>من مطعم قريب منك.</h1>
+
+      <p class="lead">
+        اكتشف عرضاً يومياً من مطعم قريب منك، واطلب مباشرة من المطعم.
+        لا اشتراك، ولا رسوم إلا على الطلب المكتمل.
+      </p>
+
+      <!-- ASSUMPTION: الرقم 312 بيانات عرض توضيحية داخل النموذج الأولي، وليس إحصاءً لسوق بريدة. -->
+      <span class="mini-pill"><b>312</b> هدية تم فتحها اليوم
+        <span class="badge" style="background:#fff3ea;color:#a35a2a">بيانات تجريبية</span></span>
+    </div>
+
+    <!-- بطاقة الهدية (يسار) -->
+    <aside class="gift-card" aria-label="هدية اليوم">
+      <div class="gc-top">
+        <span class="gc-icon">
+          <svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
+            <rect x="3" y="8" width="18" height="4" rx="1"/><path d="M12 8v13"/>
+            <path d="M19 12v7a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2v-7"/>
+            <path d="M7.5 8a2.5 2.5 0 0 1 0-5C11 3 12 8 12 8s1-5 4.5-5a2.5 2.5 0 0 1 0 5"/>
+          </svg>
+        </span>
+        <span class="gc-num">هدية رقم 01</span>
+      </div>
+
+      <div class="gc-box">
+        <svg width="46" height="46" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round">
+          <rect x="3" y="8" width="18" height="4" rx="1"/><path d="M12 8v13"/>
+          <path d="M19 12v7a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2v-7"/>
+          <path d="M7.5 8a2.5 2.5 0 0 1 0-5C11 3 12 8 12 8s1-5 4.5-5a2.5 2.5 0 0 1 0 5"/>
+        </svg>
+      </div>
+
+      <p class="gc-sub">جاهزة لك في بريدة</p>
+      <p class="gc-title">هدية اليوم</p>
+
+      <button class="gc-cta" type="button" onclick="location.href='gift.html'">
+        <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round">
+          <rect x="3" y="8" width="18" height="4" rx="1"/><path d="M12 8v13"/>
+          <path d="M19 12v7a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2v-7"/>
+          <path d="M7.5 8a2.5 2.5 0 0 1 0-5C11 3 12 8 12 8s1-5 4.5-5a2.5 2.5 0 0 1 0 5"/>
+        </svg>
+        افتح هديتك
+      </button>
+
+      <div class="gc-line"></div>
+      <div class="gc-foot">
+        <span>بريدة، السعودية</span>
+        <span>هدية واحدة يومياً</span>
+      </div>
+    </aside>
+
+  </div>
+</section>
+
+<hr class="divider" />
+
+<!-- ================= FEATURES ================= -->
+<section class="features">
+  <div class="container features-grid">
+
+    <article class="f-card">
+      <div>
+        <h3 class="f-title">هدية غير تقليدية</h3>
+        <p class="f-desc">اكتشف عرضاً لم تكن تعرفه، الخصم يُكشف عند الفتح فقط.</p>
+      </div>
+      <span class="f-ico" aria-hidden="true">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
+          <rect x="3" y="8" width="18" height="4" rx="1"/><path d="M12 8v13"/>
+          <path d="M19 12v7a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2v-7"/>
+          <path d="M7.5 8a2.5 2.5 0 0 1 0-5C11 3 12 8 12 8s1-5 4.5-5a2.5 2.5 0 0 1 0 5"/>
+        </svg>
+      </span>
+    </article>
+
+    <article class="f-card">
+      <div>
+        <h3 class="f-title">مطعم قريب منك</h3>
+        <p class="f-desc">عروض منتقاة من مطاعم قريبة من حيّك داخل بريدة.</p>
+      </div>
+      <span class="f-ico" aria-hidden="true">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M15 21v-8a1 1 0 0 0-1-1h-4a1 1 0 0 0-1 1v8"/>
+          <path d="M3 10a2 2 0 0 1 .709-1.528l7-6a2 2 0 0 1 2.582 0l7 6A2 2 0 0 1 21 10v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/>
+        </svg>
+      </span>
+    </article>
+
+    <article class="f-card">
+      <div>
+        <h3 class="f-title">اطلب مباشرة</h3>
+        <p class="f-desc">الدفع والاستلام يتم مع المطعم مباشرة بدون وسيط.</p>
+      </div>
+      <span class="f-ico" aria-hidden="true">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M4 2v20l2-1 2 1 2-1 2 1 2-1 2 1 2-1 2 1V2l-2 1-2-1-2 1-2-1-2 1-2-1-2 1Z"/>
+          <path d="M16 8h-6a2 2 0 1 0 0 4h4a2 2 0 1 1 0 4H8"/><path d="M12 17.5v-11"/>
+        </svg>
+      </span>
+    </article>
+
+  </div>
+</section>
+
+<!-- ================= RESTAURANTS ================= -->
+<section class="restaurants">
+  <div class="container rest-row">
+    <div>
+      <p class="eyebrow">للمطاعم</p>
+      <h2 class="rest-title">هل تملك مطعماً؟</h2>
+    </div>
+    <div class="rest-actions">
+      <a class="btn btn-outline" href="login.html?next=/r/">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="m12 19-7-7 7-7"/><path d="M19 12H5"/>
+        </svg>
+        لوحة المطعم
+      </a>
+      <a class="btn btn-dark" href="login.html?next=/admin/">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <rect width="7" height="7" x="3" y="3" rx="1"/><rect width="7" height="7" x="14" y="3" rx="1"/>
+          <rect width="7" height="7" x="14" y="14" rx="1"/><rect width="7" height="7" x="3" y="14" rx="1"/>
+        </svg>
+        لوحة الإدارة
+      </a>
+    </div>
+  </div>
+</section>
+
+<script>
+  // قائمة الجوال فقط — لا يؤثر على المظهر على الشاشات الكبيرة
+  const toggle = document.getElementById('navToggle');
+  const links  = document.getElementById('navLinks');
+  toggle?.addEventListener('click', () => links.classList.toggle('open'));
+</script>
+</body>
+</html>

@@ -1,0 +1,157 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>العروض | لوحة المطعم</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Arabic:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../assets/css/app.css">
+</head>
+<body>
+<header class="nav"><div class="container nav-inner">
+  <a class="brand" href="/r/"><span class="brand-mark">🎁</span>
+    <span><span class="brand-name">هدية</span><br><span class="brand-sub">العروض</span></span></a>
+  <span class="nav-spacer"></span>
+  <button class="btn btn-primary btn-sm" id="addOffer">+ عرض جديد</button>
+</div></header>
+<div id="tabs"></div>
+<main class="container" id="app" style="padding-bottom:40px"></main>
+<script src="../assets/js/vendor/supabase.js"></script>
+<script type="module">
+import { sb, dt } from '../assets/js/core.js';
+import { $, esc, toast, modal, requireConfig, guardStaff } from '../assets/js/ui.js';
+
+if (!requireConfig()) throw new Error('not configured');
+const auth = await guardStaff();
+if (!auth) throw new Error('unauthorized');
+
+$('#tabs').innerHTML = `<div class="container"><div class="tabs">
+  ${[['d','اللوحة','/r/'],['o','الطلبات','/r/orders.html'],['m','المنيو','/r/menu.html'],
+     ['f','العروض','/r/offers.html'],['s','كشف الحساب','/r/statement.html'],
+     ['p','الملف','/r/profile.html']].map(([k,l,h]) =>
+    `<a class="tab ${k==='f'?'active':''}" href="${h}">${l}</a>`).join('')}
+</div></div>`;
+
+const rid = auth.restaurantId;
+const { data: offers } = await sb.from('offers')
+  .select('*').eq('restaurant_id', rid).order('created_at', { ascending: false });
+
+$('#app').innerHTML = `
+  <div class="page-head">
+    <h1 class="page-title">العروض</h1>
+    <p class="page-sub">العميل لا يرى الخصم قبل فتح الهدية — أنت تحدد النطاق فقط</p>
+  </div>
+  <div class="alert alert-info">
+    حدد <b>أدنى وأعلى خصم</b> ونظام الهدية يختار قيمة داخل النطاق عند كل فتح.
+    لن يعرض النظام خصماً أقل من الحد الأدنى الذي حددته.</div>
+  ${(offers || []).length ? (offers || []).map(o => `
+    <div class="card mb">
+      <div class="between">
+        <div>
+          <div style="font-weight:700">${esc(o.title)}</div>
+          <div class="small muted">${esc(o.description || '')}</div>
+        </div>
+        <span class="badge ${o.is_enabled ? 'badge-green' : 'badge-red'}">
+          ${o.is_enabled ? 'مفعّل' : 'موقوف'}</span>
+      </div>
+      <div class="flex mt" style="gap:6px;flex-wrap:wrap">
+        <span class="badge badge-orange">النطاق ${Number(o.min_discount)}% — ${Number(o.max_discount)}%</span>
+        <span class="badge">الحد اليومي ${o.daily_limit}</span>
+        <span class="badge ${o.redeemed_on && o.redeemed_today >= o.daily_limit
+          ? 'badge-red' : ''}">مستخدم اليوم ${o.redeemed_on ? o.redeemed_today : 0}</span>
+      </div>
+      ${o.active_until ? `<p class="small muted mt">ينتهي: ${dt(o.active_until)}</p>` : ''}
+      <div class="flex mt" style="gap:8px">
+        <button class="btn btn-ghost btn-sm grow" data-toggle="${o.id}"
+          data-v="${o.is_enabled}">${o.is_enabled ? 'إيقاف' : 'تفعيل'}</button>
+        <button class="btn btn-ghost btn-sm grow" data-edit="${o.id}">تعديل</button>
+      </div>
+    </div>`).join('')
+  : '<div class="empty"><div class="empty-ico">🏷️</div><p>لا توجد عروض.</p></div>'}`;
+function edit(o) {
+  const oo = o || { title: 'خصم', description: '', min_discount: 5, max_discount: 20,
+    daily_limit: 20, active_from: '', active_until: '' };
+  modal(`<h3 class="modal-title">${o ? 'تعديل العرض' : 'عرض جديد'}</h3>
+    <div class="field"><label class="label">عنوان العرض</label>
+      <input class="input" id="o_title" value="${esc(oo.title)}"></div>
+    <div class="field"><label class="label">وصف مختصر</label>
+      <input class="input" id="o_desc" value="${esc(oo.description || '')}"></div>
+    <div class="row2">
+      <div class="field"><label class="label">أدنى خصم %</label>
+        <input class="input" id="o_min" inputmode="decimal" value="${Number(oo.min_discount)}"></div>
+      <div class="field"><label class="label">أعلى خصم %</label>
+        <input class="input" id="o_max" inputmode="decimal" value="${Number(oo.max_discount)}"></div>
+    </div>
+    <div class="field"><label class="label">الحد اليومي للاستخدام</label>
+      <input class="input" id="o_lim" inputmode="numeric" value="${oo.daily_limit}"></div>
+    <div class="row2">
+      <div class="field"><label class="label">يبدأ من</label>
+        <input class="input" id="o_from" type="datetime-local"
+          value="${toLocal(oo.active_from)}"></div>
+      <div class="field"><label class="label">ينتهي في</label>
+        <input class="input" id="o_to" type="datetime-local"
+          value="${toLocal(oo.active_until)}"></div>
+    </div>
+    <div class="field"><label class="label">ساعات التفعيل (اختياري)</label>
+      <input class="input" id="o_hours"
+        placeholder="مثال: 16:00-23:00 — اتركه فارغاً = طوال اليوم"
+        value="${esc(hoursStr(oo.active_hours))}"></div>
+    <button class="btn btn-primary btn-block mt" id="o_ok">حفظ العرض</button>`, {
+    onOpen: (m, close) => m.querySelector('#o_ok').onclick = async () => {
+      const min = Number(m.querySelector('#o_min').value);
+      const max = Number(m.querySelector('#o_max').value);
+      const lim = Number(m.querySelector('#o_lim').value);
+      if (!(min > 0) || !(max >= min) || max > 100) return toast('تحقق من نطاق الخصم');
+      if (!(lim > 0)) return toast('الحد اليومي يجب أن يكون أكبر من صفر');
+
+      const row = {
+        title: m.querySelector('#o_title').value.trim() || 'خصم',
+        description: m.querySelector('#o_desc').value.trim() || null,
+        min_discount: min, max_discount: max, daily_limit: lim,
+        active_from: m.querySelector('#o_from').value || null,
+        active_until: m.querySelector('#o_to').value || null,
+        active_hours: parseHours(m.querySelector('#o_hours').value)
+      };
+      if (!o) {
+        const { error } = await sb.from('offers').insert({ ...row, restaurant_id: rid });
+        if (error) return toast(error.message);
+      } else {
+        const { error } = await sb.from('offers').update(row).eq('id', o.id);
+        if (error) return toast(error.message);
+      }
+      close(); toast('تم الحفظ'); setTimeout(() => location.reload(), 400);
+    }
+  });
+}
+
+function toLocal(ts) {
+  if (!ts) return '';
+  const d = new Date(ts);
+  return new Date(d.getTime() - d.getTimezoneOffset() * 60000).toISOString().slice(0, 16);
+}
+function hoursStr(h) {
+  try {
+    return (JSON.parse(h || '[]')).map(w => `${w.start}-${w.end}`).join(', ');
+  } catch { return ''; }
+}
+function parseHours(s) {
+  if (!s.trim()) return [];
+  return s.split(',').map(p => {
+    const [a, b] = p.trim().split('-');
+    return { start: (a || '').trim(), end: (b || '').trim() };
+  }).filter(w => w.start && w.end);
+}
+</script>
+</body>
+</html>
+
+$('#app').querySelectorAll('[data-toggle]').forEach(b => b.onclick = async () => {
+  await sb.from('offers').update({ is_enabled: b.dataset.v !== 'true' }).eq('id', b.dataset.toggle);
+  toast('تم التحديث'); setTimeout(() => location.reload(), 300);
+});
+$('#app').querySelectorAll('[data-edit]').forEach(b => b.onclick = () =>
+  edit((offers || []).find(o => o.id === b.dataset.edit)));
+
+$('#addOffer').onclick = () => edit(null);

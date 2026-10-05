@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>دفتر الحسابات | الإدارة</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Arabic:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../assets/css/app.css">
+</head>
+<body>
+<header class="nav"><div class="container nav-inner">
+  <a class="brand" href="/admin/"><span class="brand-mark">🎁</span>
+    <span><span class="brand-name">هدية</span><br><span class="brand-sub">دفتر الحسابات</span></span></a>
+</div></header>
+<div id="tabs"></div>
+<main class="container" id="app" style="padding-bottom:40px"></main>
+<script src="../assets/js/vendor/supabase.js"></script>
+<script type="module">
+import { sb, sar, dt } from '../assets/js/core.js';
+import { $, esc, toast, requireConfig, guardAdmin } from '../assets/js/ui.js';
+
+if (!requireConfig()) throw new Error('not configured');
+if (!await guardAdmin()) throw new Error('unauthorized');
+
+$('#tabs').innerHTML = `<div class="container"><div class="tabs">
+  ${[['d','المؤشرات','/admin/'],['r','المطاعم','/admin/restaurants.html'],
+     ['o','الطلبات','/admin/orders.html'],['f','العروض','/admin/offers.html'],
+     ['l','دفتر الحسابات','/admin/ledger.html'],['s','كشوف الحساب','/admin/statements.html'],
+     ['g','الإعدادات','/admin/settings.html']].map(([k,l,h]) =>
+    `<a class="tab ${k==='l'?'active':''}" href="${h}">${l}</a>`).join('')}
+</div></div>`;
+
+const period = new URLSearchParams(location.search).get('p') || '';
+const { data } = await sb.rpc('admin_ledger', { p_period: period || null });
+if (!data?.ok) { $('#app').innerHTML = '<div class="empty">تعذّر التحميل</div>'; throw 0; }
+
+const t = data.totals;
+const BILL = { unbilled: ['مستحق', 'badge-orange'], billed: ['مُصدر', 'badge-blue'],
+               paid: ['مسدّد', 'badge-green'] };
+
+$('#app').innerHTML = `
+  <div class="page-head">
+    <h1 class="page-title">دفتر الحسابات</h1>
+    <p class="page-sub">${period || 'كل الفترات'} — كل حركة مالية قابلة للتدقيق</p>
+  </div>
+
+  <div class="tabs">
+    <a class="tab ${period === '' ? 'active' : ''}" href="?p=">الكل</a>
+    <a class="tab ${period === '2026-10' ? 'active' : ''}" href="?p=2026-10">2026-10</a>
+  </div>
+
+  <div class="stats">
+    <div class="stat"><div class="stat-k">طلبات مكتملة</div><div class="stat-v">${t.completed_orders}</div></div>
+    <div class="stat"><div class="stat-k">قيمة الطلبات</div><div class="stat-v">${sar(t.order_value)}</div></div>
+    <div class="stat"><div class="stat-k">الخصومات</div><div class="stat-v">${sar(t.discounts)}</div></div>
+    <div class="stat stat-ns"><div class="stat-k">رسوم المنصة</div><div class="stat-v">${sar(t.platform_fees)}</div></div>
+  </div>
+
+  <div class="alert alert-info mt">
+    كل سطر هنا يمثّل طلباً <b>مكتملاً فقط</b>. الطلبات الملغاة أو غير المكتملة لا تنتج أي حركة مالية.
+    المنع لمنع التكرار مطبَّق على مستوى قاعدة البيانات.</div>
+
+  <div class="card" style="padding:0">
+    <div class="table-wrap"><table>
+      <thead><tr><th>الطلب</th><th>المطعم</th><th>قيمة الطلب</th><th>خصم تحمّله المطعم</th>
+        <th>رسوم المنصة</th><th>صافي المطعم</th><th>الفترة</th><th>الحالة</th><th>التاريخ</th></tr></thead>
+      <tbody>
+        ${(data.lines || []).map(l => `<tr>
+          <td><b>#${esc(l.code)}</b></td>
+          <td>${esc(l.restaurant)}</td>
+          <td>${sar(l.order_total)}</td>
+          <td>${sar(l.discount_amount)}</td>
+          <td style="color:var(--orange-deep);font-weight:700">${sar(l.platform_fee)}</td>
+          <td><b>${sar(l.restaurant_net)}</b></td>
+          <td>${esc(l.period)}</td>
+          <td><span class="badge ${BILL[l.billing_status]?.[1] || ''}">
+            ${BILL[l.billing_status]?.[0] || l.billing_status}</span></td>
+          <td class="muted">${dt(l.completed_at)}</td>
+        </tr>`).join('') || '<tr><td colspan="9" class="center muted">لا توجد حركات</td></tr>'}
+      </tbody>
+    </table></div>
+  </div>`;
+</script>
+</body>
+</html>

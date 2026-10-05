@@ -1,0 +1,150 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>دخول | هدية</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Arabic:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="assets/css/app.css">
+</head>
+<body>
+<header class="nav"><div class="container nav-inner">
+  <a class="brand" href="index.html">
+    <span class="brand-mark">🎁</span>
+    <span><span class="brand-name">هدية</span><br><span class="brand-sub">دخول المطاعم والإدارة</span></span>
+  </a>
+</div></header>
+<main class="container page" style="max-width:520px" id="app"></main>
+<script src="assets/js/vendor/supabase.js"></script>
+<script type="module">
+import { sb } from './assets/js/core.js';
+import { $, esc, toast, modal, requireConfig, currentSession } from './assets/js/ui.js';
+
+if (!requireConfig()) throw new Error('not configured');
+
+const next = new URLSearchParams(location.search).get('next') || '/r/';
+const err  = new URLSearchParams(location.search).get('err');
+const MSG = {
+  not_restaurant: 'هذا الحساب ليس حساب مطعم.',
+  no_restaurant: 'لا يوجد مطعم مرتبط بهذا الحساب.'
+};
+
+$('#app').innerHTML = `
+  <div class="page-head center">
+    <h1 class="page-title">تسجيل الدخول</h1>
+    <p class="page-sub">للمطاعم والإدارة فقط — العميل يستخدم المنصة بلا تسجيل</p>
+  </div>
+
+  ${err ? `<div class="alert alert-error">${esc(MSG[err] || 'تعذّر الدخول')}</div>` : ''}
+
+  <div class="card">
+    <div class="field"><label class="label">البريد الإلكتروني</label>
+      <input class="input" id="email" type="email" inputmode="email"
+        placeholder="you@restaurant.com"></div>
+    <div class="field"><label class="label">كلمة المرور</label>
+      <input class="input" id="pass" type="password" placeholder="••••••••"></div>
+    <button class="btn btn-primary btn-block btn-lg" id="signin">دخول</button>
+    <div class="flex mt" style="gap:8px">
+      <button class="btn btn-ghost grow btn-sm" id="signupR">حساب مطعم جديد</button>
+      <button class="btn btn-ghost grow btn-sm" id="forgot">نسيت كلمة المرور</button>
+    </div>
+  </div>
+
+  <div class="card mt">
+    <div style="font-weight:700">رسالة للمطاعم</div>
+    <p class="small muted">نحن لا نبيعك برنامج طلبات فقط. نحاول أن نجلب لك عميلاً من خلال عرض محلي،
+      ثم نحوّل هذا الاكتشاف إلى طلب مباشر.</p>
+    <p class="small muted">لا تدفع عند التسجيل أو إضافة المنيو أو ظهور عرضك.
+      تدفع فقط عندما يكتمل الطلب.</p>
+  </div>`;
+
+if (await currentSession()) location.replace(next);
+
+$('#signin').onclick = async () => {
+  const email = $('#email').value.trim(), pass = $('#pass').value;
+  if (!email || !pass) return toast('أدخل البريد وكلمة المرور');
+  const btn = $('#signin');
+  btn.disabled = true; btn.innerHTML = '<span class="spin"></span>';
+  const { error } = await sb.auth.signInWithPassword({ email, password: pass });
+  if (error) { btn.disabled = false; btn.textContent = 'دخول'; return toast('بيانات الدخول غير صحيحة'); }
+  toast('✅ تم الدخول');
+  setTimeout(() => location.replace(next), 400);
+};
+
+$('#forgot').onclick = async () => {
+  const email = $('#email').value.trim();
+  if (!email) return toast('أدخل بريدك أولاً');
+  await sb.auth.resetPasswordForEmail(email, { redirectTo: location.origin + '/login.html' });
+  toast('تم إرسال رابط الاستعادة إن كان الحساب موجوداً');
+};
+
+$('#signupR').onclick = async () => {
+  const close = modal(`
+    <h3 class="modal-title">تسجيل مطعم جديد</h3>
+    <div class="field"><label class="label">اسم المطعم</label>
+      <input class="input" id="r_name"></div>
+    <div class="field"><label class="label">البريد الإلكتروني</label>
+      <input class="input" id="r_email" type="email"></div>
+    <div class="field"><label class="label">كلمة المرور</label>
+      <input class="input" id="r_pass" type="password"></div>
+    <div class="field"><label class="label">رقم الجوال</label>
+      <input class="input" id="r_phone" inputmode="tel" placeholder="05xxxxxxxx"></div>
+    <div class="field"><label class="label">العنوان</label>
+      <input class="input" id="r_addr" placeholder="الحي، الشارع"></div>
+    <div class="field"><label class="label">الحي</label>
+      <select class="input" id="r_area"><option value="">— اختر —</option></select></div>
+    <label class="check"><input type="checkbox" id="r_pickup" checked> استلام متاح</label>
+    <label class="check"><input type="checkbox" id="r_delivery"> توصيل من المطعم</label>
+    <button class="btn btn-primary btn-block mt" id="r_go">إنشاء الحساب</button>
+    <p class="hint">التسجيل مجاني. المطعم يبدأ بحالة «بانتظار التفعيل» حتى يفعّله الإدارة.</p>`);
+
+  const m = document.querySelector('.modal-bg:last-child .modal');
+  const { data: areas } = await sb.rpc('active_areas');
+  m.querySelector('#r_area').innerHTML = '<option value="">— اختر —</option>' +
+    (areas || []).map(a => `<option value="${a.id}">${esc(a.name)}</option>`).join('');
+
+  m.querySelector('#r_go').onclick = async () => {
+    const p = {
+      name: m.querySelector('#r_name').value.trim(),
+      email: m.querySelector('#r_email').value.trim(),
+      pass: m.querySelector('#r_pass').value,
+      phone: m.querySelector('#r_phone').value.trim(),
+      addr: m.querySelector('#r_addr').value.trim(),
+      area: m.querySelector('#r_area').value,
+      pickup: m.querySelector('#r_pickup').checked,
+      delivery: m.querySelector('#r_delivery').checked
+    };
+    if (!p.name || !p.email || p.pass.length < 6)
+      return toast('أكمل البيانات — كلمة المرور 6 أحرف على الأقل');
+    if (!p.phone) return toast('أدخل رقم الجوال');
+
+    const { data: s, error } = await sb.auth.signUp({
+      email: p.email, password: p.pass,
+      options: { data: { full_name: p.name, phone: p.phone } }
+    });
+    if (error) return toast(error.message);
+
+    if (!s.session) {
+      const { error: e2 } = await sb.auth.signInWithPassword({
+        email: p.email, password: p.pass });
+      if (e2) return toast('تحقق من بريدك لتفعيل الحساب ثم سجّل الدخول');
+    }
+
+    const { data: res } = await sb.rpc('register_restaurant', {
+      p_name: p.name, p_phone: p.phone, p_address: p.addr,
+      p_area: p.area ? Number(p.area) : null,
+      p_pickup: p.pickup, p_delivery: p.delivery
+    });
+    if (!res?.ok) return toast(res?.error || 'تعذّر إنشاء المطعم');
+    close();
+    toast('✅ تم التسجيل — بانتظار تفعيل الإدارة');
+    setTimeout(() => location.replace('/r/'), 900);
+  };
+};
+</script>
+</body>
+</html>
+  toast('تم إرسال رابط الاستعادة إن كان الحساب موجوداً');
+};

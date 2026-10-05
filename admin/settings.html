@@ -1,0 +1,164 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>الإعدادات | الإدارة</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Arabic:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../assets/css/app.css">
+</head>
+<body>
+<header class="nav"><div class="container nav-inner">
+  <a class="brand" href="/admin/"><span class="brand-mark">🎁</span>
+    <span><span class="brand-name">هدية</span><br><span class="brand-sub">الإعدادات</span></span></a>
+</div></header>
+<div id="tabs"></div>
+<main class="container" id="app" style="padding-bottom:40px"></main>
+<script src="../assets/js/vendor/supabase.js"></script>
+<script type="module">
+import { sb, sar } from '../assets/js/core.js';
+import { $, esc, toast, requireConfig, guardAdmin } from '../assets/js/ui.js';
+
+if (!requireConfig()) throw new Error('not configured');
+if (!await guardAdmin()) throw new Error('unauthorized');
+
+$('#tabs').innerHTML = `<div class="container"><div class="tabs">
+  ${[['d','المؤشرات','/admin/'],['r','المطاعم','/admin/restaurants.html'],
+     ['o','الطلبات','/admin/orders.html'],['f','العروض','/admin/offers.html'],
+     ['l','دفتر الحسابات','/admin/ledger.html'],['s','كشوف الحساب','/admin/statements.html'],
+     ['g','الإعدادات','/admin/settings.html']].map(([k,l,h]) =>
+    `<a class="tab ${k==='g'?'active':''}" href="${h}">${l}</a>`).join('')}
+</div></div>`;
+
+const { data: rows } = await sb.from('app_settings').select('*').order('key');
+const S = Object.fromEntries((rows || []).map(r => [r.key, r.value]));
+const desc = Object.fromEntries((rows || []).map(r => [r.key, r.description]));
+const raw = k => { const v = S[k]; return v && typeof v === 'object' ? JSON.stringify(v) : String(v); };
+
+$('#app').innerHTML = `
+  <div class="page-head">
+    <h1 class="page-title">الإعدادات</h1>
+    <p class="page-sub">كل ما هنا قابل للتغيير بلا تعديل الكود</p>
+  </div>
+
+  <div class="card" style="background:linear-gradient(135deg,#fff6e5,#ffe9d4);border:0">
+    <div style="font-weight:700">💰 رسوم المنصة</div>
+    <p class="small">الرسوم <b>ثابتة على الطلب المكتمل</b> ولا تعتمد على قيمة الطلب.
+      القيمة الحالية <b>${sar(Number(S.platform_fee))}</b>.</p>
+    <div class="field"><label class="label">القيمة (ر.س)</label>
+      <input class="input" id="s_platform_fee" inputmode="decimal"
+        value="${esc(raw('platform_fee'))}"></div>
+    <p class="hint">لم تُحدَّد قيمة في المتطلبات. جرّب أكثر من قيمة وراقب أثرها على استعداد
+      المطاعم للدفع قبل أي قرار.</p>
+  </div>
+
+  <div class="card mt">
+    <div style="font-weight:700">🎁 إعدادات الهدية</div>
+    <div class="field mt"><label class="label">عدد الهدايا لكل جهاز يومياً</label>
+      <input class="input" id="s_gifts_per_day" inputmode="numeric"
+        value="${esc(raw('gifts_per_day'))}"></div>
+    <div class="field"><label class="label">أدنى خصم عام (%)</label>
+      <input class="input" id="s_min_discount_floor" inputmode="decimal"
+        value="${esc(raw('min_discount_floor'))}"></div>
+    <p class="hint">${esc(desc.min_discount_floor || '')}</p>
+    <div class="field"><label class="label">دقة الخصم</label>
+      <input class="input" id="s_discount_step" inputmode="decimal"
+        value="${esc(raw('discount_step'))}"></div>
+    <div class="field"><label class="label">طريقة اختيار الخصم</label>
+      <select class="input" id="s_discount_strategy">
+        <option value="uniform" ${S.discount_strategy === 'uniform' ? 'selected' : ''}>
+          uniform — توزيع منتظم داخل النطاق</option>
+<div class="card mt">
+    <div style="font-weight:700">🎯 حدود الحملات</div>
+    <div class="row2">
+      <div class="field"><label class="label">أدنى خصم مسموح %</label>
+        <input class="input" id="s_campaign_discount_min" inputmode="decimal"
+          value="${esc(raw('campaign_discount_min'))}"></div>
+      <div class="field"><label class="label">أعلى خصم مسموح %</label>
+        <input class="input" id="s_campaign_discount_max" inputmode="decimal"
+          value="${esc(raw('campaign_discount_max'))}"></div>
+    </div>
+    <div class="field"><label class="label">أقصى حد يومي</label>
+      <input class="input" id="s_campaign_daily_limit_max" inputmode="numeric"
+        value="${esc(raw('campaign_daily_limit_max'))}"></div>
+  </div>
+
+  <div class="card mt">
+    <div style="font-weight:700">⏱️ الطلبات والمدينة</div>
+    <div class="field"><label class="label">مهلة الطلب (دقيقة)</label>
+      <input class="input" id="s_order_timeout_minutes" inputmode="numeric"
+        value="${esc(raw('order_timeout_minutes'))}"></div>
+    <div class="field"><label class="label">المدينة</label>
+      <input class="input" id="s_city" value="${esc(raw('city'))}"></div>
+    <div class="field"><label class="label">نسخة سياسة الموافقات</label>
+      <input class="input" id="s_policy_version" value="${esc(raw('policy_version'))}"></div>
+    <p class="hint">المتطلبات النظامية لحماية البيانات
+      <span class="badge badge-orange">تحتاج تحققاً رسمياً</span></p>
+  </div>
+
+  <button class="btn btn-primary btn-block btn-lg mt" id="save">حفظ كل الإعدادات</button>
+
+  <div class="card mt">
+    <div style="font-weight:700">إعلانات</div>
+    <label class="check mt"><input type="checkbox" id="s_ads_enabled"
+      ${S.ads_enabled === true ? 'checked' : ''}> تفعيل الإعلانات (غير مفعّل في هذه المرحلة)</label>
+    <p class="hint">المرساة موجودة في قاعدة البيانات. أي تفعيل لاحق يجب أن يحافظ على:
+      واضح أنه إعلان · زر إغلاق كبير · لا يمنع الوصول للهدية · لا يغيّر الخصم.</p>
+  </div>
+
+  <div class="card mt">
+    <div style="font-weight:700">الأحياء المدعومة</div>
+    <div class="flex mt" style="gap:8px">
+      <input class="input" id="newArea" placeholder="اسم حي في بريدة">
+      <button class="btn btn-ghost" id="addArea">+</button>
+    </div>
+    <div id="areaList" class="mt"></div>
+  </div>`;
+
+async function saveAll() {
+  const num = (id, key) => sb.rpc('admin_set_setting',
+    { p_key: key, p_value: Number($(id).value) });
+  const str = (id, key) => sb.rpc('admin_set_setting',
+    { p_key: key, p_value: $(id).value.trim() });
+
+  await num('#s_platform_fee', 'platform_fee');
+  await num('#s_gifts_per_day', 'gifts_per_day');
+  await num('#s_min_discount_floor', 'min_discount_floor');
+  await num('#s_discount_step', 'discount_step');
+  await str('#s_discount_strategy', 'discount_strategy');
+  await num('#s_campaign_discount_min', 'campaign_discount_min');
+  await num('#s_campaign_discount_max', 'campaign_discount_max');
+  await num('#s_campaign_daily_limit_max', 'campaign_daily_limit_max');
+  await num('#s_order_timeout_minutes', 'order_timeout_minutes');
+  await str('#s_city', 'city');
+  await str('#s_policy_version', 'policy_version');
+  await sb.rpc('admin_set_setting',
+    { p_key: 'ads_enabled', p_value: $('#s_ads_enabled').checked });
+  toast('✅ تم حفظ الإعدادات');
+}
+$('#save').onclick = saveAll;
+
+async function loadAreas() {
+  const { data } = await sb.rpc('active_areas');
+  $('#areaList').innerHTML = (data || []).map(a =>
+    `<div class="between small" style="padding:5px 0"><span>${esc(a.name)}</span></div>`).join('')
+    || '<p class="small muted">لا توجد أحياء.</p>';
+}
+$('#addArea').onclick = async () => {
+  const name = $('#newArea').value.trim();
+  if (!name) return;
+  const { error } = await sb.from('areas').insert({ name });
+  if (error) return toast('تعذّرت الإضافة (قد يكون الاسم مكرراً)');
+  $('#newArea').value = '';
+  toast('تمت الإضافة'); loadAreas();
+};
+await loadAreas();
+</script>
+</body>
+</html>
+        <option value="bias_min" ${S.discount_strategy === 'bias_min' ? 'selected' : ''}>
+          bias_min — تميل للحد الأدنى</option>
+      </select></div>
+  </div>

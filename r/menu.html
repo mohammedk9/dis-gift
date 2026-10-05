@@ -1,0 +1,150 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>المنيو | لوحة المطعم</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Arabic:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../assets/css/app.css">
+</head>
+<body>
+<header class="nav"><div class="container nav-inner">
+  <a class="brand" href="/r/"><span class="brand-mark">🎁</span>
+    <span><span class="brand-name">هدية</span><br><span class="brand-sub">المنيو</span></span></a>
+  <span class="nav-spacer"></span>
+  <button class="btn btn-primary btn-sm" id="addCat">+ قسم</button>
+</div></header>
+<div id="tabs"></div>
+<main class="container" id="app" style="padding-bottom:40px"></main>
+<script src="../assets/js/vendor/supabase.js"></script>
+<script type="module">
+import { sb, sar } from '../assets/js/core.js';
+import { $, esc, toast, modal, requireConfig, guardStaff } from '../assets/js/ui.js';
+
+if (!requireConfig()) throw new Error('not configured');
+const auth = await guardStaff();
+if (!auth) throw new Error('unauthorized');
+
+$('#tabs').innerHTML = `<div class="container"><div class="tabs">
+  ${[['d','اللوحة','/r/'],['o','الطلبات','/r/orders.html'],['m','المنيو','/r/menu.html'],
+     ['f','العروض','/r/offers.html'],['s','كشف الحساب','/r/statement.html'],
+     ['p','الملف','/r/profile.html']].map(([k,l,h]) =>
+    `<a class="tab ${k==='m'?'active':''}" href="${h}">${l}</a>`).join('')}
+</div></div>`;
+
+const { data: cats } = await sb.from('menu_categories')
+  .select('*').eq('restaurant_id', auth.restaurantId).order('sort_order');
+const wanted = new URLSearchParams(location.search).get('c');
+const cat = (cats || []).find(c => c.id === wanted) || cats?.[0];
+
+function render() {
+  if (!cat) {
+    $('#app').innerHTML = `<div class="empty"><div class="empty-ico">📋</div>
+      <p>أضف قسماً ثم أضف الأصناف.</p>
+      <button class="btn btn-primary mt" id="addCat2">+ قسم جديد</button></div>`;
+    $('#addCat2').onclick = addCat;
+    return;
+  }
+  const items = cat.items || [];
+  $('#app').innerHTML = `
+    <div class="page-head"><h1 class="page-title">المنيو</h1></div>
+    <div class="tabs">
+      ${(cats || []).map(c => `<a class="tab ${c.id === cat.id ? 'active' : ''}"
+        href="?c=${c.id}">${esc(c.name)}</a>`).join('')}
+      <a class="tab" href="#" id="newCatInline">+ قسم</a>
+    </div>
+    <button class="btn btn-primary btn-block mb" id="addItem">+ إضافة صنف</button>
+    ${items.length ? items.map(i => `
+      <div class="mitem">
+        <div class="mitem-info">
+          <p class="mitem-name">${esc(i.name)}</p>
+          ${i.description ? `<p class="mitem-desc">${esc(i.description)}</p>` : ''}
+          <div class="mitem-price">${sar(i.price)}</div>
+        </div>
+        <div class="flex" style="gap:6px;align-items:center">
+          <span class="badge ${i.is_available ? 'badge-green' : 'badge-red'}">
+            ${i.is_available ? 'متوفر' : 'غير متوفر'}</span>
+          <button class="btn btn-ghost btn-sm" data-edit="${i.id}">تعديل</button>
+        </div>
+      </div>`).join('')
+    : '<div class="empty"><p>لا توجد أصناف في هذا القسم.</p></div>'}`;
+
+  $('#addItem').onclick = () => itemModal(null);
+  $('#newCatInline').onclick = e => { e.preventDefault(); addCat(); };
+  $('#app').querySelectorAll('[data-edit]').forEach(b =>
+    b.onclick = () => itemModal(items.find(x => x.id === b.dataset.edit)));
+}
+
+$('#addCat').onclick = addCat;
+
+function addCat() {
+  modal(`<h3 class="modal-title">قسم جديد</h3>
+    <div class="field"><label class="label">اسم القسم</label>
+      <input class="input" id="cn" placeholder="مثال: الأطباق الرئيسية"></div>
+    <button class="btn btn-primary btn-block" id="cn-ok">إضافة</button>`, {
+    onOpen: (m, close) => m.querySelector('#cn-ok').onclick = async () => {
+      const name = m.querySelector('#cn').value.trim();
+      if (!name) return toast('أدخل اسم القسم');
+      const { data } = await sb.rpc('upsert_category', { p_id: null, p_name: name });
+      if (data?.ok) { close(); toast('تمت الإضافة'); setTimeout(() => location.reload(), 400); }
+      else toast('تعذّرت الإضافة');
+    }
+  });
+}
+function itemModal(item) {
+  const opts = (cats || []).map(c =>
+    `<option value="${c.id}" ${item?.category_id === c.id ? 'selected' : ''}
+      >${esc(c.name)}</option>`).join('');
+  modal(`<h3 class="modal-title">${item ? 'تعديل صنف' : 'صنف جديد'}</h3>
+    <div class="field"><label class="label">الاسم</label>
+      <input class="input" id="i_name" value="${esc(item?.name || '')}"></div>
+    <div class="field"><label class="label">الوصف</label>
+      <input class="input" id="i_desc" value="${esc(item?.description || '')}"></div>
+    <div class="field"><label class="label">السعر (ر.س)</label>
+      <input class="input" id="i_price" inputmode="decimal"
+        value="${item ? Number(item.price) : ''}"></div>
+    <div class="field"><label class="label">رابط الصورة (اختياري)</label>
+      <input class="input" id="i_img" value="${esc(item?.image_url || '')}"
+        placeholder="https://..."></div>
+    <div class="field"><label class="label">القسم</label>
+      <select class="input" id="i_cat">${opts}</select></div>
+    <label class="check"><input type="checkbox" id="i_avail"
+      ${!item || item.is_available ? 'checked' : ''}> متوفر حالياً</label>
+    <button class="btn btn-primary btn-block mt" id="i_ok">حفظ</button>
+    ${item ? '<button class="btn btn-red btn-block mt" id="i_del">تعطيل الصنف</button>' : ''}`, {
+    onOpen: (m, close) => {
+      m.querySelector('#i_ok').onclick = async () => {
+        const price = Number(m.querySelector('#i_price').value);
+        if (!m.querySelector('#i_name').value.trim()) return toast('أدخل اسم الصنف');
+        if (!(price > 0)) return toast('أدخل سعراً صحيحاً');
+        const { data } = await sb.rpc('upsert_menu_item', {
+          p_id: item?.id || null,
+          p_category: m.querySelector('#i_cat').value || null,
+          p_name: m.querySelector('#i_name').value.trim(),
+          p_price: price,
+          p_description: m.querySelector('#i_desc').value.trim() || null,
+          p_image: m.querySelector('#i_img').value.trim() || null,
+          p_available: m.querySelector('#i_avail').checked
+        });
+        if (data?.ok) { close(); toast('تم الحفظ'); setTimeout(() => location.reload(), 400); }
+        else toast('تعذّر الحفظ');
+      };
+      m.querySelector('#i_del')?.addEventListener('click', async () => {
+        await sb.from('menu_items').update({ is_available: false }).eq('id', item.id);
+        close(); toast('تم التعطيل'); setTimeout(() => location.reload(), 400);
+      });
+    }
+  });
+}
+
+if (cat) {
+  const { data: its } = await sb.from('menu_items')
+    .select('*').eq('category_id', cat.id).order('sort_order');
+  cat.items = its || [];
+}
+render();
+</script>
+</body>
+</html>

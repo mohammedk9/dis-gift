@@ -1,0 +1,115 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>لوحة المطعم | هدية</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Arabic:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../assets/css/app.css">
+</head>
+<body>
+<header class="nav"><div class="container nav-inner">
+  <a class="brand" href="/index.html">
+    <span class="brand-mark">🎁</span>
+    <span><span class="brand-name">هدية</span><br><span class="brand-sub">لوحة المطعم</span></span>
+  </a>
+  <span class="nav-spacer"></span>
+  <span class="badge" id="stBadge">—</span>
+  <button class="btn btn-ghost btn-sm" id="logout">خروج</button>
+</div></header>
+<div id="tabs"></div>
+<main class="container" id="app" style="padding-bottom:40px"></main>
+<script src="../assets/js/vendor/supabase.js"></script>
+<script type="module">
+import { sb, sar, RSTATUS_AR } from '../assets/js/core.js';
+import { $, esc, toast, requireConfig, guardStaff } from '../assets/js/ui.js';
+
+if (!requireConfig()) throw new Error('not configured');
+const auth = await guardStaff();
+if (!auth) throw new Error('unauthorized');
+
+$('#logout').onclick = async () => { await sb.auth.signOut(); location.href = '/login.html'; };
+
+$('#tabs').innerHTML = `<div class="container"><div class="tabs">
+  ${[['d','اللوحة','/r/'],['o','الطلبات','/r/orders.html'],['m','المنيو','/r/menu.html'],
+     ['f','العروض','/r/offers.html'],['s','كشف الحساب','/r/statement.html'],
+     ['p','الملف','/r/profile.html']].map(([k,l,h]) =>
+    `<a class="tab ${k==='d'?'active':''}" href="${h}">${l}</a>`).join('')}
+</div></div>`;
+
+const { data: d } = await sb.rpc('restaurant_dashboard', { p_days: 30 });
+if (!d?.ok) { $('#app').innerHTML = '<div class="empty">تعذّر تحميل اللوحة</div>'; throw 0; }
+
+const { data: rest } = await sb.from('restaurants')
+  .select('status').eq('id', auth.restaurantId).maybeSingle();
+const st = rest?.status || 'pending';
+$('#stBadge').textContent = RSTATUS_AR[st];
+$('#stBadge').className = 'badge ' + (st === 'active' ? 'badge-green'
+  : st === 'pending' ? 'badge-orange' : 'badge-red');
+
+const conv = d.gifts_opened ? (d.gift_orders_completed / d.gifts_opened) : 0;
+
+$('#app').innerHTML = `
+  ${st !== 'active' ? `<div class="alert alert-warn">
+    حسابك بحالة «${RSTATUS_AR[st]}». لن تظهر عروضك للعملاء حتى تفعّله الإدارة.
+    ${st === 'suspended' ? 'تواصل مع الإدارة لمعرفة السبب.' : ''}</div>` : ''}
+
+  <div class="page-head">
+    <h1 class="page-title">لوحة المطعم</h1>
+    <p class="page-sub">آخر 30 يوماً</p>
+  </div>
+
+  <div class="stats">
+    <div class="stat"><div class="stat-k">طلبات جديدة</div>
+      <div class="stat-v">${d.new_orders}</div></div>
+    <div class="stat"><div class="stat-k">طلبات حالية</div>
+      <div class="stat-v">${d.active_orders}</div></div>
+    <div class="stat"><div class="stat-k">طلبات مكتملة</div>
+      <div class="stat-v">${d.completed_orders}</div></div>
+    <div class="stat"><div class="stat-k">هدايا مفتوحة</div>
+      <div class="stat-v">${d.gifts_opened}</div></div>
+  </div>
+
+  <div class="card mt">
+    <div style="font-weight:700;margin-bottom:12px">من الهدية إلى الطلب المكتمل</div>
+    <div class="timeline">
+      <div class="tl-item done"><div class="tl-t">🎁 هدايا مفتوحة</div>
+        <div class="tl-d">${d.gifts_opened}</div></div>
+      <div class="tl-item ${d.menu_viewed ? 'done' : ''}">
+        <div class="tl-t">👁️ مشاهدات المنيو</div><div class="tl-d">${d.menu_viewed}</div></div>
+      <div class="tl-item ${d.cart_created ? 'done' : ''}">
+        <div class="tl-t">🛒 سلات</div><div class="tl-d">${d.cart_created}</div></div>
+      <div class="tl-item ${d.orders_from_gifts ? 'done' : ''}">
+        <div class="tl-t">📋 طلبات من الهدايا</div><div class="tl-d">${d.orders_from_gifts}</div></div>
+      <div class="tl-item ${d.gift_orders_completed ? 'done' : ''}">
+        <div class="tl-t">✅ طلبات مكتملة من الهدايا</div>
+        <div class="tl-d">${d.gift_orders_completed}</div></div>
+    </div>
+    <div class="alert alert-info mt mb">
+      <b>Conversion من هدية إلى طلب مكتمل:</b> ${(conv * 100).toFixed(1)}%
+      <br><span class="small">${d.gifts_opened} هدية مفتوحة ← ${d.gift_orders_completed} طلب مكتمل</span>
+    </div>
+  </div>
+
+  <div class="card mt">
+    <div class="between mb"><span>مبيعات مكتملة</span>
+      <span style="font-weight:700">${sar(d.revenue)}</span></div>
+    <div class="between"><span>رسوم منصة مستحقة (غير مسددة)</span>
+      <span style="font-weight:700;color:var(--orange-deep)">${sar(d.fees_due)}</span></div>
+    <p class="hint">الرسوم تُحتسب على الطلب المكتمل فقط — لا رسوم على التسجيل أو الإضافة أو الإلغاء.</p>
+    <a class="btn btn-ghost btn-block mt" href="/r/statement.html">عرض كشف الحساب</a>
+  </div>
+
+  <div class="card mt">
+    <div style="font-weight:700;margin-bottom:8px">رسالة القيمة</div>
+    <p class="small muted">نحن لا نبيعك برنامج طلبات فقط. نحاول أن نجلب لك عميلاً من خلال عرض محلي،
+      ثم نحوّل هذا الاكتشاف إلى طلب مباشر.</p>
+    <p class="small muted">لا تدفع عند التسجيل أو عند عرض مطعمك. تدفع فقط عندما يكتمل الطلب.</p>
+  </div>`;
+
+setTimeout(() => location.reload(), 60000);
+</script>
+</body>
+</html>

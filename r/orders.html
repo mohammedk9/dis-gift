@@ -1,0 +1,138 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>الطلبات | لوحة المطعم</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Arabic:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../assets/css/app.css">
+</head>
+<body>
+<header class="nav"><div class="container nav-inner">
+  <a class="brand" href="/r/"><span class="brand-mark">🎁</span>
+    <span><span class="brand-name">هدية</span><br><span class="brand-sub">الطلبات</span></span></a>
+  <span class="nav-spacer"></span>
+  <button class="btn btn-ghost btn-sm" id="refresh">تحديث</button>
+</div></header>
+<div id="tabs"></div>
+<main class="container" id="app" style="padding-bottom:40px"></main>
+<script src="../assets/js/vendor/supabase.js"></script>
+<script type="module">
+import { sb, sar, dt, STATUS_AR, STATUS_CLASS } from '../assets/js/core.js';
+import { $, esc, toast, modal, requireConfig, guardStaff } from '../assets/js/ui.js';
+
+if (!requireConfig()) throw new Error('not configured');
+const auth = await guardStaff();
+if (!auth) throw new Error('unauthorized');
+
+$('#tabs').innerHTML = `<div class="container"><div class="tabs">
+  ${[['d','اللوحة','/r/'],['o','الطلبات','/r/orders.html'],['m','المنيو','/r/menu.html'],
+     ['f','العروض','/r/offers.html'],['s','كشف الحساب','/r/statement.html'],
+     ['p','الملف','/r/profile.html']].map(([k,l,h]) =>
+    `<a class="tab ${k==='o'?'active':''}" href="${h}">${l}</a>`).join('')}
+</div></div>`;
+
+let filter = new URLSearchParams(location.search).get('f') || 'new';
+
+async function load() {
+  const { data } = await sb.rpc('restaurant_orders', { p_status: filter });
+  const orders = (data?.orders || []).filter(o =>
+    filter === 'all' || o.status === filter);
+
+  $('#app').innerHTML = `
+    <div class="page-head"><h1 class="page-title">الطلبات</h1></div>
+    <div class="tabs">
+      ${[['new','جديدة'],['accepted','مقبولة'],['preparing','تجهيز'],['ready','جاهزة'],
+         ['completed','مكتملة'],['all','الكل']].map(([k,l]) =>
+        `<a class="tab ${filter===k?'active':''}" href="?f=${k}">${l}</a>`).join('')}
+    </div>
+    ${orders.length ? orders.map(o => card(o)).join('')
+      : '<div class="empty"><div class="empty-ico">📭</div><p>لا توجد طلبات.</p></div>'}`;
+
+  $('#app').querySelectorAll('[data-act]').forEach(b => b.onclick = () => act(b));
+}
+
+function card(o) {
+  const next = {
+    new:      [['accepted','قبول'], ['cancelled','رفض']],
+    accepted: [['preparing','بدء التجهيز'], ['cancelled','إلغاء']],
+    preparing:[['ready','جاهز'], ['cancelled','إلغاء']],
+    ready:    [['completed','✅ تم التسليم'], ['no_show','لم يحضر']],
+    completed:[], cancelled:[], no_show:[]
+  }[o.status] || [];
+
+  return `<div class="card mb">
+    <div class="between">
+      <div>
+        <div class="order-code">#${esc(o.code)} · ${dt(o.created_at)}</div>
+        <div style="font-weight:700;margin-top:2px">${esc(o.customer_name)}</div>
+        <a class="small" href="tel:${esc(o.customer_phone)}"
+          style="color:var(--orange-deep);text-decoration:none" dir="ltr">
+          ${esc(o.customer_phone)}</a>
+      </div>
+      <div style="text-align:left">
+        <span class="badge ${STATUS_CLASS[o.status]}">${STATUS_AR[o.status]}</span>
+        <div style="font-weight:700;font-size:17px;margin-top:6px">${sar(o.total)}</div>
+      </div>
+    </div>
+
+    <div class="flex" style="gap:6px;margin-top:8px;flex-wrap:wrap">
+      <span class="badge">${o.order_type === 'pickup' ? 'استلام' : 'توصيل المطعم'}</span>
+      ${o.pickup_slot ? `<span class="badge" dir="ltr">${esc(o.pickup_slot)}</span>` : ''}
+      ${o.has_discount ? `<span class="badge badge-orange">خصم هدية ${sar(o.discount)}</span>` : ''}
+    </div>
+
+    ${o.address ? `<p class="small muted mt">📍 ${esc(o.address)}</p>` : ''}
+    ${o.note ? `<p class="small muted">📝 ${esc(o.note)}</p>` : ''}
+
+    <div class="mt" style="border-top:1px solid var(--line);padding-top:10px">
+      ${o.items.map(i => `<div class="between small" style="padding:3px 0">
+        <span>${esc(i.name)} × ${i.qty}</span><span>${sar(i.line_total)}</span></div>`).join('')}
+      ${o.discount > 0 ? `<div class="between small" style="color:var(--orange-deep)">
+        <span>خصم تحمّله المطعم</span><span>− ${sar(o.discount)}</span></div>` : ''}
+    </div>
+
+    ${next.length ? `<div class="flex mt" style="gap:8px">
+      ${next.map(([s,l]) => `<button class="btn btn-sm grow ${s==='cancelled'||s==='no_show'
+        ? 'btn-red' : s==='completed' ? 'btn-green' : 'btn-primary'}"
+        data-act="${s}" data-id="${o.id}">${l}</button>`).join('')}
+    </div>` : ''}
+  </div>`;
+}
+
+async function act(btn) {
+  const to = btn.dataset.act, id = btn.dataset.id;
+  const needNote = ['cancelled','no_show'].includes(to);
+  if (needNote) {
+    modal(`<h3 class="modal-title">سبب الإلغاء / عدم الحضور</h3>
+      <textarea class="input" id="rsn" placeholder="مثال: لم يتصل العميل"></textarea>
+      <button class="btn btn-primary btn-block mt" id="rsn-ok">تأكيد</button>`, {
+      onOpen: (m, close) => m.querySelector('#rsn-ok').onclick = async () => {
+        close();
+        await go(id, to, m.querySelector('#rsn').value.trim());
+      }
+    });
+    return;
+  }
+  await go(id, to, null);
+}
+
+async function go(id, to, note) {
+  const { data, error } = await sb.rpc('transition_order',
+    { p_order: id, p_to: to, p_note: note });
+  if (error || !data?.ok) return toast(data?.error === 'invalid_transition'
+    ? 'لا يمكن الانتقال إلى هذه الحالة' : 'تعذّر تحديث الطلب');
+  toast(to === 'completed'
+    ? `✅ تم — رسوم المنصة على هذا الطلب: ${sar(data.platform_fee)}`
+    : 'تم التحديث');
+  await load();
+}
+
+$('#refresh').onclick = load;
+await load();
+setInterval(load, 30000);
+</script>
+</body>
+</html>

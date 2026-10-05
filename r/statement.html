@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>كشف الحساب | لوحة المطعم</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Arabic:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../assets/css/app.css">
+</head>
+<body>
+<header class="nav"><div class="container nav-inner">
+  <a class="brand" href="/r/"><span class="brand-mark">🎁</span>
+    <span><span class="brand-name">هدية</span><br><span class="brand-sub">كشف الحساب</span></span></a>
+</div></header>
+<div id="tabs"></div>
+<main class="container" id="app" style="padding-bottom:40px"></main>
+<script src="../assets/js/vendor/supabase.js"></script>
+<script type="module">
+import { sb, sar, dt } from '../assets/js/core.js';
+import { $, esc, requireConfig, guardStaff } from '../assets/js/ui.js';
+
+if (!requireConfig()) throw new Error('not configured');
+if (!await guardStaff()) throw new Error('unauthorized');
+
+$('#tabs').innerHTML = `<div class="container"><div class="tabs">
+  ${[['d','اللوحة','/r/'],['o','الطلبات','/r/orders.html'],['m','المنيو','/r/menu.html'],
+     ['f','العروض','/r/offers.html'],['s','كشف الحساب','/r/statement.html'],
+     ['p','الملف','/r/profile.html']].map(([k,l,h]) =>
+    `<a class="tab ${k==='s'?'active':''}" href="${h}">${l}</a>`).join('')}
+</div></div>`;
+
+const wanted = new URLSearchParams(location.search).get('p');
+const first = await sb.rpc('restaurant_statement', { p_period: null });
+const period = wanted || first?.summary ? (wanted || first.period) : wanted;
+
+const { data } = await sb.rpc('restaurant_statement', { p_period: period });
+if (!data?.ok) { $('#app').innerHTML = '<div class="empty">تعذّر التحميل</div>'; throw 0; }
+
+const s = data.summary || { completed_orders: 0, total_order_value: 0,
+  total_discounts: 0, total_platform_fees: 0, outstanding: 0, status: 'open' };
+const PERIOD_AR = { open: 'مفتوح', closed: 'مغلق', paid: 'مسدّد' };
+
+$('#app').innerHTML = `
+  <div class="page-head">
+    <h1 class="page-title">كشف الحساب</h1>
+    <p class="page-sub">الرسوم على الطلبات المكتملة فقط</p>
+  </div>
+
+  <div class="tabs">
+    ${(data.periods || []).length ? (data.periods || []).map(p =>
+      `<a class="tab ${p === data.period ? 'active' : ''}" href="?p=${p}">${p}</a>`).join('')
+      : `<a class="tab active" href="#">${data.period}</a>`}
+  </div>
+
+  <div class="card">
+    <div class="between"><span>الفترة</span>
+      <span style="font-weight:700">${esc(data.period)}
+        <span class="badge ${s.status === 'paid' ? 'badge-green'
+          : s.status === 'closed' ? 'badge-blue' : 'badge-orange'}">${PERIOD_AR[s.status]}</span>
+      </span></div>
+    <div style="height:1px;background:var(--line);margin:12px 0"></div>
+    <div class="between small"><span>الطلبات المكتملة</span><b>${s.completed_orders}</b></div>
+    <div class="between small mt"><span>إجمالي قيمة الطلبات</span><b>${sar(s.total_order_value)}</b></div>
+    <div class="between small mt"><span>إجمالي الخصومات</span>
+      <b style="color:var(--orange-deep)">${sar(s.total_discounts)}</b></div>
+    <div class="between small mt"><span>رسوم المنصة</span><b>${sar(s.total_platform_fees)}</b></div>
+    <div style="height:1px;background:var(--line);margin:12px 0"></div>
+    <div class="between"><span style="font-weight:700">المستحق</span>
+      <span style="font-weight:700;font-size:19px;color:var(--orange-deep)">${sar(s.outstanding)}</span></div>
+    <p class="hint">رسوم المنصة رسوم ثابتة على الطلب المكتمل ولا تعتمد على قيمة الطلب.
+      يمكنك تجربة قيمة مختلفة من لوحة الإدارة في أي وقت.</p>
+  </div>
+
+  <h2 class="section-title">تفاصيل الحركة</h2>
+  ${(data.lines || []).length ? `
+  <div class="card" style="padding:0">
+    <div class="table-wrap"><table>
+      <thead><tr><th>الطلب</th><th>القيمة</th><th>الخصم</th><th>رسوم المنصة</th>
+        <th>صافي المطعم</th><th>الحالة</th><th>التاريخ</th></tr></thead>
+      <tbody>
+        ${(data.lines || []).map(l => `<tr>
+          <td><b>#${esc(l.code)}</b></td>
+          <td>${sar(l.order_total)}</td>
+          <td>${sar(l.discount_amount)}</td>
+          <td style="color:var(--orange-deep)">${sar(l.platform_fee)}</td>
+          <td><b>${sar(l.restaurant_net)}</b></td>
+          <td><span class="badge ${l.billing_status === 'paid' ? 'badge-green'
+            : l.billing_status === 'billed' ? 'badge-blue' : 'badge-orange'}">
+            ${l.billing_status === 'unbilled' ? 'مستحق'
+              : l.billing_status === 'billed' ? 'مُصدر' : 'مسدّد'}</span></td>
+          <td class="muted">${dt(l.completed_at)}</td>
+        </tr>`).join('')}
+      </tbody>
+    </table></div>
+  </div>` : '<div class="empty"><p>لا توجد حركات في هذه الفترة.</p></div>'}
+
+  <p class="hint mt">لا يوجد نظام فوترة ضريبي في هذه المرحلة.
+    المتطلبات النظامية <span class="badge badge-orange">تحتاج تحققاً رسمياً</span></p>`;
+</script>
+</body>
+</html>

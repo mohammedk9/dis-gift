@@ -1,0 +1,192 @@
+﻿<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>هدية اليوم | هدية</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Arabic:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="assets/css/app.css">
+<link rel="manifest" href="manifest.webmanifest">
+<meta name="theme-color" content="#e86a33">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="هدية">
+<link rel="icon" href="assets/icon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="assets/icon.svg">
+</head>
+<body>
+<header class="nav"><div class="container nav-inner">
+  <a class="brand" href="index.html">
+    <span class="brand-mark">🎁</span>
+    <span><span class="brand-name">هدية</span><br><span class="brand-sub">اكتشف · اطلب</span></span>
+  </a>
+  <span class="nav-spacer"></span>
+  <button class="btn btn-ghost btn-sm" id="areaBtn">📍 <span id="areaLabel">كل بريدة</span></button>
+</div></header>
+
+<main class="container page" id="app">
+  <div class="page-head center">
+    <p style="color:var(--orange);font-size:13px;font-weight:600;margin:0">بريدة — اليوم</p>
+  </div>
+  <div id="stage"></div>
+</main>
+
+<div id="nav"></div>
+<script src="assets/js/vendor/supabase.js"></script>
+<script type="module">
+import { sb, deviceId, areaId, setArea, getGift, setGift } from './assets/js/core.js';
+import { $, esc, toast, modal, requireConfig, customerNav } from './assets/js/ui.js';
+
+$('#nav').innerHTML = customerNav('gift');
+if (!requireConfig()) throw new Error('not configured');
+
+let areas = [];
+const stage = $('#stage');
+
+async function loadAreas() {
+  const { data } = await sb.rpc('active_areas');
+  areas = data || [];
+  renderAreaLabel();
+}
+function renderAreaLabel() {
+  const a = areas.find(x => x.id === areaId());
+  $('#areaLabel').textContent = a ? a.name : 'كل بريدة';
+}
+$('#areaBtn').onclick = () => {
+  const close = modal(`
+    <h3 class="modal-title">📍 اختر حيّك</h3>
+    <p class="hint mb">نستخدم الحي لعرض مطاعم وعروض قريبة منك فقط.</p>
+    <label class="check"><input type="radio" name="ar" value="" ${areaId() ? '' : 'checked'}> كل بريدة</label>
+    ${areas.map(a => `<label class="check"><input type="radio" name="ar" value="${a.id}"
+      ${areaId() === a.id ? 'checked' : ''}> ${esc(a.name)}</label>`).join('')}
+    <button class="btn btn-primary btn-block mt" id="ar-save">حفظ</button>`);
+  const m = document.querySelector('.modal-bg:last-child .modal');
+  m.querySelector('#ar-save').onclick = () => {
+    setArea(m.querySelector('input[name=ar]:checked')?.value || '');
+    renderAreaLabel(); close(); render();
+  };
+};
+
+function stageClosed() {
+  return `
+    <div class="card" style="background:linear-gradient(135deg,#f59653,#e5551f);color:#fff;border:0">
+      <div class="center">
+        <div style="font-size:56px;line-height:1;margin-bottom:6px">🎁</div>
+        <h1 style="font-size:24px;font-weight:700;margin:0">🎁 هدية اليوم</h1>
+        <p style="margin:8px 0 0;opacity:.9;font-size:14px">
+          كل يوم لك هدية من مطعم قريب منك. الخصم يُكشف عند الفتح فقط.</p>
+        <div style="height:1px;background:rgba(255,255,255,.3);margin:20px 0 14px"></div>
+        <button class="btn btn-lg" id="openBtn"
+          style="background:#fff;color:var(--orange-deep)">افتح هديتك</button>
+        <p style="margin:16px 0 0;font-size:11.5px;opacity:.85">هدية واحدة يومياً لكل جهاز</p>
+      </div>
+    </div>
+
+    <div class="card mt">
+      <div class="between">
+        <div>
+          <div style="font-weight:700">كيف تعمل؟</div>
+          <div class="small muted">افتح · اكتشف · اطلب مباشرة</div>
+        </div>
+        <span class="badge badge-orange">بلا تسجيل</span>
+${[[1,'🎁','افتح هدية واحدة كل يوم'],
+           [2,'🍽️','تظهر لك هدية من مطعم قريب'],
+           [3,'🛒','اطلب من منيو المطعم مباشرة'],
+           [4,'💵','الدفع يتم مع المطعم مباشرة']].map(([n,ico,t]) => `
+          <div class="flex" style="gap:10px;align-items:center">
+            <span style="width:30px;height:30px;border-radius:9px;background:var(--peach);
+              color:var(--orange-deep);display:grid;place-items:center">${ico}</span>
+            <span class="small">${t}</span>
+            <span class="nav-spacer badge">${n}</span>
+          </div>`).join('')}
+      </div>
+    </div>`;
+}
+
+function stageNoOffer() {
+  return `
+    <div class="card center">
+      <div style="font-size:44px">⏳</div>
+      <h2 style="font-size:19px;font-weight:700;margin:10px 0 4px">لا توجد هدية متاحة حالياً</h2>
+      <p class="muted small">حاول لاحقاً. قد تكون عروض اليوم قد انتهت أو أن المطاعم القريبة
+        نفدت من عروضها.</p>
+      <button class="btn btn-ghost mt" onclick="location.reload()">تحديث</button>
+    </div>`;
+}
+
+function stageOpened(d) {
+  const g = d.gift, r = d.restaurant, o = d.offer || {};
+  return `
+    <div class="reveal">
+      <div class="gift-box">🎁</div>
+      <p class="small muted" style="margin:0">🎁 هديتك اليوم</p>
+      <div class="discount-value">${esc(g.discount)}%</div>
+      <p style="margin:2px 0 0;font-weight:600">خصم من ${esc(r.name)}</p>
+    </div>
+
+    <div class="card mt">
+      <div class="flex" style="gap:12px;align-items:center">
+        ${r.logo_url ? `<img src="${esc(r.logo_url)}" alt=""
+            style="width:56px;height:56px;border-radius:14px;object-fit:cover;flex:none">`
+          : `<div style="width:56px;height:56px;border-radius:14px;background:var(--peach);
+              color:var(--orange-deep);display:grid;place-items:center;font-size:24px;flex:none">🍽️</div>`}
+        <div class="grow">
+          <div style="font-weight:700;font-size:16px">${esc(r.name)}</div>
+          <div class="small muted">${esc(r.address || 'بريدة')}</div>
+        </div>
+      </div>
+
+      ${o.description ? `<p class="small muted mt">${esc(o.description)}</p>` : ''}
+
+      <div class="flex mt" style="gap:8px;flex-wrap:wrap">
+        ${r.pickup_enabled ? '<span class="badge badge-green">استلام متاح</span>' : ''}
+        ${r.delivery_enabled ? '<span class="badge badge-blue">توصيل المطعم</span>' : ''}
+        <span class="badge">التحضير ~${esc(r.prep_time_min)} دقيقة</span>
+        ${o.expires_at ? `<span class="badge badge-orange">ينتهي ${new Date(o.expires_at)
+          .toLocaleDateString('ar-SA')}</span>` : ''}
+      </div>
+
+      <button class="btn btn-primary btn-block btn-lg mt" id="orderNow">اطلب الآن</button>
+      ${g.redeemed ? '<div class="alert alert-ok mt mb">تم استخدام هذه الهدية في طلب.</div>' : ''}
+      <p class="hint center mt">الدفع يتم مباشرة للمطعم. لا يوجد دفع إلكتروني عبر المنصة.</p>
+    </div>`;
+}
+
+async function render() {
+  const cached = getGift();
+  if (cached) { stage.innerHTML = stageOpened(cached); wire(cached); return; }
+  stage.innerHTML = stageClosed();
+  $('#openBtn').onclick = open;
+}
+
+async function open() {
+  const btn = $('#openBtn');
+  btn.disabled = true;
+  btn.innerHTML = '<span class="spin"></span> جارٍ الفتح…';
+  const { data, error } = await sb.rpc('open_daily_gift', {
+    p_device: deviceId(), p_area: areaId()
+  });
+  if (error || !data?.ok) { stage.innerHTML = stageNoOffer(); return; }
+  setGift(data);
+  stage.innerHTML = stageOpened(data);
+  wire(data);
+  toast('🎁 لديك هدية اليوم!');
+}
+
+function wire(d) {
+  $('#orderNow')?.addEventListener('click', () => {
+    if (d.gift.redeemed) { location.href = 'orders.html'; return; }
+    location.href = 'menu.html';
+  });
+}
+
+await loadAreas();
+await render();
+
+if ('serviceWorker' in navigator && location.protocol === 'https:') {
+  navigator.serviceWorker.register('sw.js').catch(() => {});
+}
+</script>
+</body>
+</html>

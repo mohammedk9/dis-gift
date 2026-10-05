@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>كشوف الحساب | الإدارة</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Arabic:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../assets/css/app.css">
+</head>
+<body>
+<header class="nav"><div class="container nav-inner">
+  <a class="brand" href="/admin/"><span class="brand-mark">🎁</span>
+    <span><span class="brand-name">هدية</span><br><span class="brand-sub">كشوف الحساب</span></span></a>
+</div></header>
+<div id="tabs"></div>
+<main class="container" id="app" style="padding-bottom:40px"></main>
+<script src="../assets/js/vendor/supabase.js"></script>
+<script type="module">
+import { sb, sar, dt } from '../assets/js/core.js';
+import { $, esc, toast, requireConfig, guardAdmin } from '../assets/js/ui.js';
+
+if (!requireConfig()) throw new Error('not configured');
+if (!await guardAdmin()) throw new Error('unauthorized');
+
+$('#tabs').innerHTML = `<div class="container"><div class="tabs">
+  ${[['d','المؤشرات','/admin/'],['r','المطاعم','/admin/restaurants.html'],
+     ['o','الطلبات','/admin/orders.html'],['f','العروض','/admin/offers.html'],
+     ['l','دفتر الحسابات','/admin/ledger.html'],['s','كشوف الحساب','/admin/statements.html'],
+     ['g','الإعدادات','/admin/settings.html']].map(([k,l,h]) =>
+    `<a class="tab ${k==='s'?'active':''}" href="${h}">${l}</a>`).join('')}
+</div></div>`;
+
+const period = new URLSearchParams(location.search).get('p')
+  || new Date().toISOString().slice(0, 7);
+
+const { data: rests } = await sb.rpc('admin_list_restaurants');
+const list = rests?.restaurants || [];
+
+const { data: led } = await sb.rpc('admin_ledger', { p_period: period });
+const lines = led?.lines || [];
+const byRest = {};
+lines.forEach(l => { byRest[l.restaurant] = (byRest[l.restaurant] || 0) + Number(l.platform_fee); });
+
+$('#app').innerHTML = `
+  <div class="page-head">
+    <h1 class="page-title">كشوف الحساب</h1>
+    <p class="page-sub">الفترة ${period}</p>
+  </div>
+
+  <div class="card">
+    <label class="label">الفترة</label>
+    <input class="input" id="per" type="month" value="${period}">
+    <button class="btn btn-ghost btn-block mt" id="go">عرض</button>
+  </div>
+
+  <div class="card mt">
+    <div class="between"><span class="small">إجمالي الرسوم في الفترة</span>
+      <b style="color:var(--orange-deep);font-size:19px">${sar(led?.totals?.platform_fees)}</b></div>
+    <div class="between mt"><span class="small">طلبات مكتملة</span>
+      <b>${led?.totals?.completed_orders || 0}</b></div>
+  </div>
+
+  <h2 class="section-title">حسب المطعم</h2>
+  ${list.map(r => {
+    const fee = byRest[r.name] || 0;
+    if (!fee) return '';
+    return `<div class="card mb">
+      <div class="between">
+        <div>
+          <div style="font-weight:700">${esc(r.name)}</div>
+          <div class="small muted">${esc(r.area || '')}</div>
+        </div>
+        <div style="text-align:left">
+          <div style="font-weight:700;color:var(--orange-deep)">${sar(fee)}</div>
+          <div class="small muted">رسوم مستحقة</div>
+        </div>
+      </div>
+    </div>`;
+  }).join('') || '<div class="empty"><p>لا توجد رسوم في هذه الفترة.</p></div>'}
+
+  <button class="btn btn-primary btn-block btn-lg mt" id="close">
+    إغلاق الفترة وإصدار الكشوف</button>
+  <p class="hint center mt">إغلاق الفترة يحوّل الحركات من «مستحق» إلى «مُصدر».
+    الطلبات الجديدة بعد الإغلاق تدخل الفترة التالية تلقائياً.</p>`;
+
+$('#go').onclick = () => location.href = '?p=' + $('#per').value;
+
+$('#close').onclick = async () => {
+  const { data } = await sb.rpc('admin_close_period', { p_period: $('#per').value });
+  if (data?.ok) { toast('✅ تم إغلاق الفترة'); setTimeout(() => location.reload(), 600); }
+  else toast('تعذّر الإغلاق');
+};
+</script>
+</body>
+</html>

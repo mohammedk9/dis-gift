@@ -1,0 +1,154 @@
+# هدية — Lean MVP (بريدة)
+
+**DISCOVERY + DISCOUNT + DIRECT ORDER**
+
+منصة تربط العميل بمطاعم محلية في بريدة عبر "هدية يومية" مفاجئة، ثم تحوّل الاكتشاف
+إلى طلب مباشر من المطعم. المنصة **لا تقوم بالتوصيل** ولا **لا تمر أموال العميل بحسابها**.
+
+> **BUILD LESS · MEASURE MORE · LEARN FAST**
+
+---
+
+## 1) السؤالان اللذان نختبرهما
+
+1. **هل فتح هدية تحتوي على خصم من مطعم محلي يؤدي فعلاً إلى طلب مؤكد؟**
+   → المؤشر: `Completed Orders Generated Per Gift` (North Star).
+
+2. **هل المطعم يرى أن دفع رسوم ثابتة على الطلب الناجح أقل تكلفة وأكثر فائدة له؟**
+   → المؤشر: هل المطاعم تدفع رسوم كشف الحساب فعلاً أم لا؟
+
+إذا كانت الإجابة (2) لا، يجب تغيير نموذج الإيرادات **قبل** بناء أي ميزة جديدة.
+
+---
+
+## 2) التشغيل (5 دقائق)
+
+### أ) إنشاء مشروع Supabase — مجاني
+1. أنشئ مشروعاً على [supabase.com](https://supabase.com).
+2. من **SQL Editor** شغّل الملفات بالترتيب:
+   - `supabase/migrations/0001_schema.sql`
+   - `supabase/migrations/0002_rls.sql`
+   - `supabase/migrations/0003_functions.sql`
+   - `supabase/migrations/0004_seed.sql`
+3. من **Authentication → Users** أنشئ حساب إدارة، ثم شغّل:
+   ```sql
+   insert into public.admin_users (user_id)
+   select id from auth.users where email = 'your@email.com';
+   ```
+
+### ب) التشغيل محلياً
+```bash
+npx serve .          # أو أي سيرفر ملفات ثابت
+```
+ثم افتح `http://localhost:3000`.
+
+> ⚠️ **لا تفتح الملفات بـ `file://`** — المتصفح يمنع ES Modules وطلبات الشبكة.
+> لكن **RLS على anon مفصول بـrevoke**، لذا `http://localhost` آمن للتطوير.
+
+### ج) ربط الواجهة
+عند أول فتح لأي صفحة سيظهر شاشة "إعداد الاتصال". أدخل:
+- **Project URL**: `https://xxxx.supabase.co`
+- **Anon Key**: من Project Settings → API
+
+تُحفظ محلياً في المتصفح (اسم زر "مسح بيانات الجهاز" يمسحها).
+
+### د) النشر (اختياري — مجاني)
+ارفع المجلد كما هو على Vercel / Netlify كـ static site. لا build step ولا متغيرات بيئة.
+
+---
+
+## 3) الصفحات
+
+| المسار | لمن |
+|---|---|
+| `/index.html` | Landing |
+| `/gift.html` | 🎁 هدية اليوم + الفتح (بلا تسجيل) |
+| `/menu.html` | منيو المطعم + السلة |
+| `/checkout.html` | استلام/توصيل + وقت + الموافقات |
+| `/order.html?code=` | متابعة حالة الطلب |
+| `/orders.html` · `/notices.html` · `/account.html` | السجل والإشعارات والموافقات |
+| `/login.html` | دخول المطعم / الإدارة (بريد + كلمة مرور) |
+| `/r/` | لوحة المطعم: الطلبات · المنيو · العروض · كشف الحساب · الملف |
+| `/admin/` | المؤشرات · المطاعم · الطلبات · العروض · دفتر الحسابات · كشوف · الإعدادات |
+
+**تسجيل العميل غير مطلوب** — كما طُلب. يُعرَّف بـ `device_id` محفوظ في المتصفح،
+و平日 واحد = هدية واحدة عبر القيد `unique(device_id, gift_date)`.
+
+---
+
+## 4) دورة الطلب والرسوم
+
+```
+NEW → ACCEPTED → PREPARING → READY → COMPLETED
+ └────────────→ CANCELLED / NO_SHOW
+```
+
+- **الرسوم تُنشأ عند `COMPLETED` فقط** — داخل `transition_order()`.
+- `platform_fee` تُلتقط كنسخة على الطلب وقت الإكمال (لا تتغير كشوف الماضي).
+- `restaurant_ledger` له قيد `unique(order_id, entry_type)` → **لا يمكن توليد رسوم مرتين**.
+- الطلبات الملغاة أو غير المكتملة = **صفر رسوم**.
+
+---
+
+## 5) منطق الخصم
+
+المطعم يحدد `[min_discount, max_discount]` فقط. النظام يختار قيمة **داخل النطاق**
+- مضمونة ≥ الحد الأدنى (لا يُعرض خصم أقل مما سمح به المطعم)
+- ثابتة لنفس (جهاز + عرض + يوم) → نفس النتيجة عند إعادة الفتح
+- بلا أرقام مخترعة ولا قواعد إضافية
+
+الإعدادات في `/admin/settings.html`: `platform_fee`, `gifts_per_day`,
+`min_discount_floor`, `discount_step`, `discount_strategy`, حدود الحملات.
+
+---
+
+## 6) الافتراضات والقيود
+
+### ASSUMPTION
+- **رسوم المنصة = 0 افتراضياً.** المتطلبات لم تحدد قيمة، والنظام لا يفترض رقماً.
+  تُضبط من `/admin/settings.html` ثم تُختبر أكثر من قيمة.
+- **أسماء الأحياء في الـseed بيانات تشغيلية** وليست قائمة أحياء بريدة الرسمية —
+  استبدلها قبل الإطلاق الحقيقي.
+- **"312 هدية اليوم"** في صفحة الهبوط رقم توضيحي وليس بيانات سوق.
+
+### REQUIRES OFFICIAL VERIFICATION
+- **التوصيل بالدراجات داخل الأحياء** — لا يفترض النظام أنه مسموح. «توصيل المطعم»
+  يعني أن المطعم هو المنفّذ. أي تشغيل للدراجات مرحلة منفصلة تعتمد على متطلبات
+  هيئة النقل والجهات المختصة.
+- **حماية البيانات ومشاركة رقم الجوال** — الموافقتان منفصلتان والمسجَّل،
+  لكن المتطلبات النظامية تحتاج مراجعة الجهة المختصة.
+- **الفوترة / الضريبة** — غير منفَّذة. التصميم يحتمل إضافتها لاحقاً.
+
+### غير مُدَّعى
+لا يوجد أي ادعاء في المنتج عن عمولات المنافسين أو حجم سوق بريدة أو نسب استخدام
+التوصيل. الرسائل تتحدث عن قيمتنا نحن فقط.
+
+---
+
+## 7) مؤشرات القياس
+
+**North Star:** `order_completed ÷ gift_open`
+
+المسار: `gift_open → menu_view → cart_created → order_created → order_completed`
++ عملاء + مطاعم + اقتصاديات — كلها في `/admin/`.
+
+**لا توجد أرقام مرجعية (benchmarks) في أي مكان بال-product.** الأرقام تُكتشف من السوق.
+
+---
+
+## 8) بنية المشروع
+
+```
+index.html · gift · menu · checkout · order · orders · notices · account · login
+r/      → index(dashboard) · orders · menu · offers · statement · profile
+admin/  → index(kpis) · restaurants · orders · offers · ledger · statements · settings
+assets/css/app.css        design system (RTL, mobile-first)
+assets/js/core.js         Supabase client · device · cart · formats
+assets/js/ui.js           toast · modal · guards (r/ · admin/)
+supabase/migrations/*.sql 01_schema · 02_rls · 03_functions · 04_seed
+manifest.webmanifest · sw.js · assets/icon.svg
+```
+
+**قاعدة التصميم:** المتصفح لا يقرّر شيئاً تجارياً. كل منطق الأعمال (فتح الهدية،
+حساب الخصم، إنشاء الطلب، انتقالات الحالة، الرسوم) داخل Postgres Functions
+لا يمكن تجاوزها من الواجهة. لهذا يمكن استبدال الواجهة لاحقاً بلا كسر النموذج.
