@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="ar" dir="rtl">
 <head>
 <meta charset="UTF-8">
@@ -22,7 +22,7 @@
 <script type="module">
 import { sb, deviceId, areaId, setArea, getGift, getCart, cartTotal, clearCart, sar }
   from './assets/js/core.js';
-import { $, esc, toast, requireConfig, customerNav } from './assets/js/ui.js';
+import { $, esc, toast, requireConfig, customerNav, initPWA } from './assets/js/ui.js';
 
 document.body.insertAdjacentHTML('beforeend', customerNav('gift'));
 if (!requireConfig()) throw new Error('not configured');
@@ -38,8 +38,18 @@ const areas = areaRows || [];
 const val = k => localStorage.getItem(k) || '';
 
 const sub = cartTotal();
-const disc = Math.round(sub * gift.gift.discount) / 100;
-const total = sub - disc;
+// قيمة الهدية تُحسب بنفس منطق قاعدة البيانات
+let disc;
+if (gift.gift.kind === 'fixed_amount') disc = Math.min(Number(gift.gift.discount), sub);
+else disc = Math.round(sub * gift.gift.discount) / 100;
+const total = Math.round((sub - disc) * 100) / 100;
+
+const GIFT_TEXT = {
+  percent:      (v) => `خصم ${v}%`,
+  fixed_amount: (v) => `هدية ${v} ر.س`,
+  free_item:    ()   => gift.gift.gift_label || 'صنف مجاني'
+};
+const giftText = GIFT_TEXT[gift.gift.kind || 'percent'](gift.gift.discount);
 
 $('#app').innerHTML = `
   <div class="page-head">
@@ -47,20 +57,20 @@ $('#app').innerHTML = `
     <p class="page-sub">${esc(R.name)}</p>
   </div>
 
-  <div class="alert alert-info">💵 الدفع يتم مباشرة للمطعم — عند الاستلام أو عند توصيل المطعم.
+  <div class="alert alert-info">💵 الدفع يتم مباشرة مع المنشأة — عند الاستلام أو عند توصيلها.
     لا يتم أي دفع إلكتروني عبر المنصة.</div>
 
   <div class="card">
     <h3 class="section-title" style="margin-top:0;font-size:15px">1️⃣ طريقة الاستلام</h3>
     <label class="check"><input type="radio" name="otype" value="pickup"
       ${R.pickup_enabled ? 'checked' : ''} ${R.pickup_enabled ? '' : 'disabled'}>
-      <span><b>استلام من المطعم</b><br><span class="small muted">اختر وقت الاستلام</span></span></label>
+      <span><b>استلام من Premises</b><br><span class="small muted">اختر وقت الاستلام</span></span></label>
     <label class="check"><input type="radio" name="otype" value="delivery"
       ${!R.pickup_enabled && R.delivery_enabled ? 'checked' : ''}
       ${R.delivery_enabled ? '' : 'disabled'}>
-      <span><b>توصيل المطعم</b><br>
-      <span class="small muted">${R.delivery_enabled ? 'يوفره المطعم نفسه'
-        : 'غير متاح من هذا المطعم حالياً'}</span></span></label>
+      <span><b>توصيل من Premises</b><br>
+      <span class="small muted">${R.delivery_enabled ? 'توفره المنشأة بنفسها'
+        : 'غير متاح من هذه المنشأة حالياً'}</span></span></label>
 
     ${R.pickup_enabled ? `
     <div id="slotBox" class="field mt">
@@ -69,7 +79,7 @@ $('#app').innerHTML = `
         ${(menu.slots || []).map(s => `<option value="${s}">${s}</option>`).join('')
           || '<option value="">لا توجد أوقات محددة</option>'}
       </select>
-      <p class="hint">أوقات الاستلام يحدّدها المطعم من جدول времени الخاص به.</p>
+      <p class="hint">أوقات الاستلام يحددها المنشأة من جدول الوقت الخاص بها.</p>
     </div>` : ''}
   </div>
 
@@ -91,16 +101,16 @@ $('#app').innerHTML = `
     <div class="field" id="addrBox"><label class="label">العنوان (للتوصيل)</label>
       <input class="input" id="caddr" value="${esc(val('hg_addr'))}"
         placeholder="الحي، الشارع، أقرب معلم"></div>
-    <div class="field"><label class="label">ملاحظة للمطعم (اختياري)</label>
+    <div class="field"><label class="label">ملاحظة للمنشأة (اختياري)</label>
       <textarea class="input" id="cnote" placeholder="مثال: بدون بصل"></textarea></div>
   </div>
 
   <div class="card mt">
     <h3 class="section-title" style="margin-top:0;font-size:15px">3️⃣ الموافقات</h3>
     <label class="check"><input type="checkbox" id="c1">
-      <span>أوافق على مشاركة رقم جوالي مع المطعم للتواصل بخصوص هذا الطلب.</span></label>
+      <span>أوافق على مشاركة رقم جوالي مع المنشأة للتواصل بخصوص هذا الطلب.</span></label>
     <label class="check"><input type="checkbox" id="c2">
-      <span>(اختياري) أوافق على تلقي عروض وتسويق من المطعم.</span></label>
+      <span>(اختياري) أوافق على تلقي عروض وتسويق من المنشأة.</span></label>
     <p class="hint">موافقة التسويق ليست شرطاً لاستخدام الخدمة. يُسجَّل نوع الموافقة ووقتها.
       <br><b>ملاحظة:</b> المتطلبات النظامية لحماية البيانات
       <span class="badge badge-orange">تحتاج تحققاً رسمياً</span></p>
@@ -109,13 +119,15 @@ $('#app').innerHTML = `
   <div class="card mt">
     <div class="between"><span>الإجمالي قبل الخصم</span><span>${sar(sub)}</span></div>
     <div class="between" style="color:var(--orange-deep)">
-      <span>خصم هدية اليوم (${esc(gift.gift.discount)}%)</span>
+      <span>${esc(giftText)}</span>
       <span>− ${sar(disc)}</span></div>
+    ${gift.gift.kind === 'free_item' ? `<div class="alert alert-info mt">
+      🎁 ${esc(gift.gift.gift_label || 'الصنف المجاني')} سيُضاف للطلب تلقائياً وسعره صفر.</div>` : ''}
     <div class="between" style="font-weight:700;font-size:18px;border-top:1px solid var(--line);
       padding-top:10px;margin-top:6px">
-      <span>المطلوب دفعه للمطعم</span><span>${sar(total)}</span></div>
+      <span>المطلوب دفعه</span><span>${sar(total)}</span></div>
     <button class="btn btn-primary btn-block btn-lg mt" id="submit">تأكيد الطلب</button>
-    <p class="hint center">لا رسوم على المنصة إلا عند اكتمال الطلب من المطعم.</p>
+    <p class="hint center">الدفع يتم مباشرة مع المنشأة. لا رسوم على المنصة إلا عند اكتمال الطلب.</p>
   </div>`;
 
 const otype = () => document.querySelector('input[name=otype]:checked')?.value;
@@ -133,9 +145,9 @@ const ERRORS = {
   empty_cart: 'السلة فارغة.',
   below_min_order: 'الطلب أقل من الحد الأدنى للمطعم.',
   pickup_slot_required: 'اختر وقت الاستلام.',
-  delivery_not_available: 'المطعم لا يوفر توصيل.',
-  pickup_not_available: 'المطعم لا يوفر استلام.',
-  restaurant_unavailable: 'المطعم غير متاح حالياً.',
+  delivery_not_available: 'هذه المنشأة لا توفر توصيل.',
+  pickup_not_available: 'هذه المنشأة لا توفر استلام.',
+  restaurant_unavailable: 'المنشأة غير متاحة حالياً.',
   gift_not_found: 'الهدية غير موجودة.'
 };
 
@@ -145,13 +157,13 @@ $('#submit').onclick = async () => {
   if (!name) return toast('أدخل الاسم');
   if (!/^05\d{8}$/.test(phone.replace(/[\s-]/g, ''))) return toast('أدخل رقم جوال صحيح يبدأ بـ 05');
   if (!$('#c1').checked) return toast('الموافقة على مشاركة الرقم مطلوبة');
-  if (otype() === 'pickup' && !R.pickup_enabled) return toast('المطعم لا يوفر استلام');
-  if (otype() === 'delivery' && !R.delivery_enabled) return toast('المطعم لا يوفر توصيل');
+  if (otype() === 'pickup' && !R.pickup_enabled) return toast('هذه المنشأة لا توفر استلام');
+  if (otype() === 'delivery' && !R.delivery_enabled) return toast('هذه المنشأة لا توفر توصيل');
   if (otype() === 'delivery' && !$('#caddr').value.trim()) return toast('أدخل العنوان للتوصيل');
 
   const slotVal = $('#slot')?.value;
   if (otype() === 'pickup' && !slotVal) {
-    return toast('المطعم لم يحدد أوقات استلام — تواصل معه أو غداً');
+    return toast('المنشأة لم تحدد أوقات استلام — تواصل معه أو غداً');
   }
 
   localStorage.setItem('hg_name', name);
@@ -200,6 +212,6 @@ $('#submit').onclick = async () => {
     <div class="field" id="addrBox"><label class="label">العنوان (للتوصيل)</label>
       <input class="input" id="caddr" value="${esc(val('hg_addr'))}"
         placeholder="الحي، الشارع، أقرب معلم"></div>
-    <div class="field"><label class="label">ملاحظة للمطعم (اختياري)</label>
+    <div class="field"><label class="label">ملاحظة للمنشأة (اختياري)</label>
       <textarea class="input" id="cnote" placeholder="مثال: بدون بصل"></textarea></div>
   </div>

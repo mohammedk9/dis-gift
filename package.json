@@ -2,12 +2,18 @@
   "name": "hadiya-mvp",
   "version": "0.1.0",
   "private": true,
-  "description": "هدية — Lean MVP: هدية يومية من مطعم محلي في بريدة، طلب مباشر، رسوم على الطلب المكتمل فقط",
+  "description": "هدية — Lean MVP: هدية يومية من مطعم أو محل قهوة مختصة في بريدة، طلب مباشر، رسوم على الطلب المكتمل فقط",
   "scripts": {
     "start": "serve . -l 3000",
-    "dev": "serve . -l 3000"
+    "dev": "serve . -l 3000",
+    "check": "node tools/check-sql-syntax.cjs && node tools/check-invariants.cjs && node tools/check-errors.cjs",
+    "check:sql": "node tools/check-sql-syntax.cjs",
+    "check:invariants": "node tools/check-invariants.cjs",
+    "check:errors": "node tools/check-errors.cjs"
   },
   "dependencies": {
-    "@supabase/supabase-js": "^2.117.2"
+    "@supabase/supabase-js": "^2.117.2",
+    "libpg-query": "^18.1.5",
+    "node-sql-parser": "^5.4.0"
   }
 }

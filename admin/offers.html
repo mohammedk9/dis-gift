@@ -35,29 +35,41 @@ $('#tabs').innerHTML = `<div class="container"><div class="tabs">
 const { data } = await sb.rpc('admin_all_offers');
 const list = data?.offers || [];
 
+const KIND_AR = {
+  percent:      (o) => `خصم ${Number(o.min_value)}% — ${Number(o.max_value)}%`,
+  fixed_amount: (o) => `مبلغ ${Number(o.min_value)} — ${Number(o.max_value)} ر.س`,
+  free_item:    (o) => `🎁 ${o.gift_label || 'صنف مجاني'}`
+};
+const BIZ_AR = {
+  restaurant: '🍽️ مطعم', cafe: '☕ كافيه', salon: '💇 صالون',
+  store: '🏪 متجر', services: '🛠️ خدمات', other: '📦 أخرى'
+};
+
 $('#app').innerHTML = `
   <div class="page-head">
-    <h1 class="page-title">العروض</h1>
+    <h1 class="page-title">العروض والهدايا</h1>
     <p class="page-sub">${list.length} عرض</p>
   </div>
   <div class="alert alert-info">يمكنك إيقاف أي عرض فوراً دون تعديل كود.
-    الخصم الفعلي يُختار داخل النطاق عند فتح العميل للهدية.</div>
+    المنشأة تختار نوع الهدية ونطاقها بنفسها — يمكنك إيقاف ما لا توافق عليه فقط.</div>
 
   <div class="card" style="padding:0">
     <div class="table-wrap"><table>
-      <thead><tr><th>المطعم</th><th>النطاق</th><th>الحد اليومي</th><th>اليوم</th>
+      <thead><tr><th>المنشأة</th><th>النوع</th><th>الهدية</th><th>الحد اليومي</th><th>اليوم</th>
         <th>الحالة</th><th></th></tr></thead>
       <tbody>
         ${list.map(o => `<tr>
-          <td><b>${esc(o.restaurant)}</b><br><span class="small muted">${esc(o.title)}</span></td>
-          <td dir="ltr">${Number(o.min_discount)}% — ${Number(o.max_discount)}%</td>
+          <td><b>${esc(o.restaurant)}</b>
+            <br><span class="small muted">${esc(o.title)}</span></td>
+          <td>${BIZ_AR[o.business_type] || '—'}</td>
+          <td dir="rtl">${esc(KIND_AR[o.kind] ? KIND_AR[o.kind](o) : '—')}</td>
           <td>${o.daily_limit}</td>
           <td>${o.redeemed_today}</td>
           <td><span class="badge ${o.is_enabled ? 'badge-green' : 'badge-red'}">
             ${o.is_enabled ? 'مفعّل' : 'موقوف'}</span></td>
           <td><button class="btn btn-ghost btn-sm" data-t="${o.id}" data-v="${o.is_enabled}">
             ${o.is_enabled ? 'إيقاف' : 'تفعيل'}</button></td>
-        </tr>`).join('') || '<tr><td colspan="6" class="center muted">لا توجد عروض</td></tr>'}
+        </tr>`).join('') || '<tr><td colspan="7" class="center muted">لا توجد عروض</td></tr>'}
       </tbody>
     </table></div>
   </div>`;

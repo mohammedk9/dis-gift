@@ -1,9 +1,9 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="ar" dir="rtl">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>العروض | لوحة المطعم</title>
+<title>العروض | لوحة المنشأة</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Arabic:wght@300;400;500;600;700&display=swap" rel="stylesheet">
@@ -40,13 +40,19 @@ const { data: offers } = await sb.from('offers')
 
 $('#app').innerHTML = `
   <div class="page-head">
-    <h1 class="page-title">العروض</h1>
-    <p class="page-sub">العميل لا يرى الخصم قبل فتح الهدية — أنت تحدد النطاق فقط</p>
+    <h1 class="page-title">العروض والهدايا</h1>
+    <p class="page-sub">أنت تحدد ما تقدّمه. العميل لا يرى القيمة قبل فتح الهدية.</p>
   </div>
   <div class="alert alert-info">
-    حدد <b>أدنى وأعلى خصم</b> ونظام الهدية يختار قيمة داخل النطاق عند كل فتح.
-    لن يعرض النظام خصماً أقل من الحد الأدنى الذي حددته.</div>
-  ${(offers || []).length ? (offers || []).map(o => `
+    الحد الأدنى العام للخصم <b>5%</b>. يمكنك اختيار «بدون خصم» وإضافة صنف مجاني فقط —
+    القرار كامل لك.</div>
+  ${(offers || []).length ? (offers || []).map(o => {
+    const kindBadge = {
+      percent: `<span class="badge badge-orange">خصم ${Number(o.min_value)}% — ${Number(o.max_value)}%</span>`,
+      fixed_amount: `<span class="badge badge-orange">مبلغ ثابت ${Number(o.min_value)} — ${Number(o.max_value)} ر.س</span>`,
+      free_item: `<span class="badge badge-green">🎁 ${esc(o.gift_label || 'صنف مجاني')}</span>`
+    }[o.kind] || '';
+    return `
     <div class="card mb">
       <div class="between">
         <div>
@@ -57,7 +63,7 @@ $('#app').innerHTML = `
           ${o.is_enabled ? 'مفعّل' : 'موقوف'}</span>
       </div>
       <div class="flex mt" style="gap:6px;flex-wrap:wrap">
-        <span class="badge badge-orange">النطاق ${Number(o.min_discount)}% — ${Number(o.max_discount)}%</span>
+        ${kindBadge}
         <span class="badge">الحد اليومي ${o.daily_limit}</span>
         <span class="badge ${o.redeemed_on && o.redeemed_today >= o.daily_limit
           ? 'badge-red' : ''}">مستخدم اليوم ${o.redeemed_on ? o.redeemed_today : 0}</span>
@@ -68,22 +74,51 @@ $('#app').innerHTML = `
           data-v="${o.is_enabled}">${o.is_enabled ? 'إيقاف' : 'تفعيل'}</button>
         <button class="btn btn-ghost btn-sm grow" data-edit="${o.id}">تعديل</button>
       </div>
-    </div>`).join('')
-  : '<div class="empty"><div class="empty-ico">🏷️</div><p>لا توجد عروض.</p></div>'}`;
+    </div>`; }).join('')
+  : '<div class="empty"><div class="empty-ico">🎁</div><p>لا توجد عروض.</p></div>'}`;
 function edit(o) {
-  const oo = o || { title: 'خصم', description: '', min_discount: 5, max_discount: 20,
-    daily_limit: 20, active_from: '', active_until: '' };
+  const oo = o || { kind: 'percent', title: 'هدية', description: '', min_value: 5,
+    max_value: 20, daily_limit: 20, gift_label: '', active_from: '', active_until: '' };
   modal(`<h3 class="modal-title">${o ? 'تعديل العرض' : 'عرض جديد'}</h3>
+
+    <div class="field"><label class="label">نوع الهدية</label>
+      <select class="input" id="o_kind">
+        <option value="percent"      ${oo.kind === 'percent' ? 'selected' : ''}>خصم نسبة مئوية</option>
+        <option value="fixed_amount" ${oo.kind === 'fixed_amount' ? 'selected' : ''}>مبلغ ثابت (ر.س)</option>
+        <option value="free_item"    ${oo.kind === 'free_item' ? 'selected' : ''}>🎁 صنف مجاني (بدون خصم)</option>
+      </select>
+      <p class="hint">الخيار الثالث: هدية بدون خصم — تعطي صنفاً مجانياً فقط.</p>
+    </div>
+
     <div class="field"><label class="label">عنوان العرض</label>
-      <input class="input" id="o_title" value="${esc(oo.title)}"></div>
+      <input class="input" id="o_title" value="${esc(oo.title)}"
+        placeholder="مثال: هدية اليوم"></div>
+
     <div class="field"><label class="label">وصف مختصر</label>
       <input class="input" id="o_desc" value="${esc(oo.description || '')}"></div>
-    <div class="row2">
-      <div class="field"><label class="label">أدنى خصم %</label>
-        <input class="input" id="o_min" inputmode="decimal" value="${Number(oo.min_discount)}"></div>
-      <div class="field"><label class="label">أعلى خصم %</label>
-        <input class="input" id="o_max" inputmode="decimal" value="${Number(oo.max_discount)}"></div>
+
+    <div id="box_range">
+      <div class="row2">
+        <div class="field"><label class="label" id="lbl_min">أدنى قيمة</label>
+          <input class="input" id="o_min" inputmode="decimal" value="${Number(oo.min_value)}"></div>
+        <div class="field"><label class="label" id="lbl_max">أعلى قيمة</label>
+          <input class="input" id="o_max" inputmode="decimal" value="${Number(oo.max_value)}"></div>
+      </div>
+      <p class="hint" id="range_hint"></p>
     </div>
+
+    <div id="box_free" class="hidden">
+      <div class="field"><label class="label">الصنف المجاني</label>
+        <select class="input" id="o_item">
+          <option value="">— اختر صنفاً من قائمتك —</option>
+        </select>
+        <p class="hint">يجب إضافة الصنف في صفحة المنيو أولاً.</p>
+      </div>
+      <div class="field"><label class="label">النص الذي يراه العميل</label>
+        <input class="input" id="o_label" value="${esc(oo.gift_label || '')}"
+          placeholder="مثال: قهوة ساخنة مجاناً"></div>
+    </div>
+
     <div class="field"><label class="label">الحد اليومي للاستخدام</label>
       <input class="input" id="o_lim" inputmode="numeric" value="${oo.daily_limit}"></div>
     <div class="row2">
@@ -99,29 +134,66 @@ function edit(o) {
         placeholder="مثال: 16:00-23:00 — اتركه فارغاً = طوال اليوم"
         value="${esc(hoursStr(oo.active_hours))}"></div>
     <button class="btn btn-primary btn-block mt" id="o_ok">حفظ العرض</button>`, {
-    onOpen: (m, close) => m.querySelector('#o_ok').onclick = async () => {
-      const min = Number(m.querySelector('#o_min').value);
-      const max = Number(m.querySelector('#o_max').value);
-      const lim = Number(m.querySelector('#o_lim').value);
-      if (!(min > 0) || !(max >= min) || max > 100) return toast('تحقق من نطاق الخصم');
-      if (!(lim > 0)) return toast('الحد اليومي يجب أن يكون أكبر من صفر');
+    onOpen: async (m, close) => {
+      // قائمة الأصناف لاختيار الصنف المجاني
+      const { data: its } = await sb.from('menu_items')
+        .select('id, name, price').eq('restaurant_id', rid)
+        .eq('is_available', true).order('name');
+      m.querySelector('#o_item').innerHTML = '<option value="">— اختر صنفاً —</option>' +
+        (its || []).map(i => `<option value="${i.id}" ${oo.gift_item_id === i.id ? 'selected' : ''}
+          >${esc(i.name)} — ${Number(i.price)} ر.س</option>`).join('');
 
-      const row = {
-        title: m.querySelector('#o_title').value.trim() || 'خصم',
-        description: m.querySelector('#o_desc').value.trim() || null,
-        min_discount: min, max_discount: max, daily_limit: lim,
-        active_from: m.querySelector('#o_from').value || null,
-        active_until: m.querySelector('#o_to').value || null,
-        active_hours: parseHours(m.querySelector('#o_hours').value)
+      const kind = m.querySelector('#o_kind');
+      const sync = () => {
+        const k = kind.value;
+        m.querySelector('#box_range').classList.toggle('hidden', k === 'free_item');
+        m.querySelector('#box_free').classList.toggle('hidden', k !== 'free_item');
+        m.querySelector('#lbl_min').textContent = k === 'percent' ? 'أدنى خصم %' : 'أدنى مبلغ ر.س';
+        m.querySelector('#lbl_max').textContent = k === 'percent' ? 'أعلى خصم %' : 'أعلى مبلغ ر.س';
+        m.querySelector('#range_hint').textContent = k === 'percent'
+          ? 'النظام يختار قيمة داخل النطاق عند كل فتح. الحد الأدنى العام 5%.'
+          : 'النظام يختار مبلغاً داخل النطاق. لا يتجاوز قيمة الطلب أبداً.';
       };
-      if (!o) {
-        const { error } = await sb.from('offers').insert({ ...row, restaurant_id: rid });
+      kind.onchange = sync;
+      sync();
+
+      m.querySelector('#o_ok').onclick = async () => {
+        const k = kind.value;
+        const lim = Number(m.querySelector('#o_lim').value);
+        if (!(lim > 0)) return toast('الحد اليومي يجب أن يكون أكبر من صفر');
+
+        let min, max, itemId = null, label = null;
+        if (k === 'free_item') {
+          itemId = m.querySelector('#o_item').value || null;
+          if (!itemId) return toast('اختر الصنف المجاني من قائمتك');
+          label = m.querySelector('#o_label').value.trim() || null;
+          min = 0; max = 0;
+        } else {
+          min = Number(m.querySelector('#o_min').value);
+          max = Number(m.querySelector('#o_max').value);
+          if (!(min >= 0)) return toast('أدخل قيمة صحيحة');
+          if (!(max >= min)) return toast('القيمة الأعلى يجب أن تكون ≥ الأدنى');
+          if (k === 'percent' && max > 100) return toast('نسبة الخصم لا تتجاوز 100%');
+        }
+
+        const row = {
+          kind: k,
+          title: m.querySelector('#o_title').value.trim() || 'هدية',
+          description: m.querySelector('#o_desc').value.trim() || null,
+          min_value: min, max_value: max,
+          gift_item_id: itemId, gift_label: label,
+          daily_limit: lim,
+          active_from: m.querySelector('#o_from').value || null,
+          active_until: m.querySelector('#o_to').value || null,
+          active_hours: parseHours(m.querySelector('#o_hours').value)
+        };
+
+        const { error } = o
+          ? await sb.from('offers').update(row).eq('id', o.id)
+          : await sb.from('offers').insert({ ...row, restaurant_id: rid });
         if (error) return toast(error.message);
-      } else {
-        const { error } = await sb.from('offers').update(row).eq('id', o.id);
-        if (error) return toast(error.message);
-      }
-      close(); toast('تم الحفظ'); setTimeout(() => location.reload(), 400);
+        close(); toast('تم الحفظ'); setTimeout(() => location.reload(), 400);
+      };
     }
   });
 }

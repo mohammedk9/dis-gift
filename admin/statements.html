@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="ar" dir="rtl">
 <head>
 <meta charset="UTF-8">
@@ -62,7 +62,7 @@ $('#app').innerHTML = `
       <b>${led?.totals?.completed_orders || 0}</b></div>
   </div>
 
-  <h2 class="section-title">حسب المطعم</h2>
+  <h2 class="section-title">حسب المنشأة</h2>
   ${list.map(r => {
     const fee = byRest[r.name] || 0;
     if (!fee) return '';

@@ -1,9 +1,9 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="ar" dir="rtl">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>ملف المطعم | لوحة المطعم</title>
+<title>ملف المنشأة | لوحة المنشأة</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Arabic:wght@300;400;500;600;700&display=swap" rel="stylesheet">
@@ -12,7 +12,7 @@
 <body>
 <header class="nav"><div class="container nav-inner">
   <a class="brand" href="/r/"><span class="brand-mark">🎁</span>
-    <span><span class="brand-name">هدية</span><br><span class="brand-sub">ملف المطعم</span></span></a>
+    <span><span class="brand-name">هدية</span><br><span class="brand-sub">ملف المنشأة</span></span></a>
 </div></header>
 <div id="tabs"></div>
 <main class="container" id="app" style="padding-bottom:40px"></main>
@@ -41,10 +41,19 @@ const { data: slots } = await sb.from('pickup_slots')
 const slotStr = (slots || []).map(s => s.slot_time.slice(0, 5)).join(', ');
 
 $('#app').innerHTML = `
-  <div class="page-head"><h1 class="page-title">ملف المطعم</h1></div>
+  <div class="page-head"><h1 class="page-title">ملف المنشأة</h1></div>
 
   <div class="card">
-    <div class="field"><label class="label">اسم المطعم</label>
+    <div class="field"><label class="label">نوع النشاط</label>
+      <select class="input" id="f_biz">
+        ${[['restaurant','🍽️ مطعم'],['cafe','☕ كافيه'],['salon','💇 صالون'],
+           ['store','🏪 متجر'],['services','🛠️ خدمات'],['other','📦 أخرى']]
+          .map(([v, l]) => `<option value="${v}" ${r?.business_type === v ? 'selected' : ''}
+            >${l}</option>`).join('')}
+      </select>
+      <p class="hint">المنصة ليست حصراً على المطاعم — أي منشأة محلية يمكنها المشاركة.</p>
+    </div>
+    <div class="field"><label class="label">اسم المنشأة</label>
       <input class="input" id="f_name" value="${esc(r?.name || '')}"></div>
     <div class="field"><label class="label">رقم الجوال</label>
       <input class="input" id="f_phone" inputmode="tel" value="${esc(r?.phone || '')}"></div>
@@ -76,10 +85,10 @@ $('#app').innerHTML = `
   <div class="card mt">
     <h3 class="section-title" style="margin-top:0;font-size:15px">الاستلام والتوصيل</h3>
     <label class="check"><input type="checkbox" id="f_pickup"
-      ${r?.pickup_enabled ? 'checked' : ''}> استلام من المطعم</label>
+      ${r?.pickup_enabled ? 'checked' : ''}> استلام من Premises</label>
     <label class="check"><input type="checkbox" id="f_delivery"
-      ${r?.delivery_enabled ? 'checked' : ''}> توصيل من المطعم</label>
-    <p class="hint">المنصة لا تقوم بالتوصيل. «توصيل من المطعم» يعني أن المطعم هو من ينفّذ التوصيل.</p>
+      ${r?.delivery_enabled ? 'checked' : ''}> توصيل من Premises</label>
+    <p class="hint">المنصة لا تقوم بالتوصيل. «توصيل من Premises» يعني أن المنشأة هي من ينفّذ التوصيل.</p>
   </div>
 
   <div class="card mt">
@@ -99,6 +108,7 @@ $('#app').innerHTML = `
 
 $('#save').onclick = async () => {
   await sb.from('restaurants').update({
+    business_type: $('#f_biz').value,
     name: $('#f_name').value.trim(),
     phone: $('#f_phone').value.trim(),
     address: $('#f_addr').value.trim(),

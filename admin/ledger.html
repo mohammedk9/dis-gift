@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="ar" dir="rtl">
 <head>
 <meta charset="UTF-8">
@@ -64,8 +64,8 @@ $('#app').innerHTML = `
 
   <div class="card" style="padding:0">
     <div class="table-wrap"><table>
-      <thead><tr><th>الطلب</th><th>المطعم</th><th>قيمة الطلب</th><th>خصم تحمّله المطعم</th>
-        <th>رسوم المنصة</th><th>صافي المطعم</th><th>الفترة</th><th>الحالة</th><th>التاريخ</th></tr></thead>
+      <thead><tr><th>الطلب</th><th>المنشأة</th><th>قيمة الطلب</th><th>خصم تحمّله المنشأة</th>
+        <th>رسوم المنصة</th><th>صافي المنشأة</th><th>الفترة</th><th>الحالة</th><th>التاريخ</th></tr></thead>
       <tbody>
         ${(data.lines || []).map(l => `<tr>
           <td><b>#${esc(l.code)}</b></td>

@@ -36,7 +36,7 @@
 <script src="assets/js/vendor/supabase.js"></script>
 <script type="module">
 import { sb, deviceId, areaId, setArea, getGift, setGift } from './assets/js/core.js';
-import { $, esc, toast, modal, requireConfig, customerNav } from './assets/js/ui.js';
+import { $, esc, toast, modal, requireConfig, customerNav, initPWA } from './assets/js/ui.js';
 
 $('#nav').innerHTML = customerNav('gift');
 if (!requireConfig()) throw new Error('not configured');
@@ -75,7 +75,7 @@ function stageClosed() {
         <div style="font-size:56px;line-height:1;margin-bottom:6px">🎁</div>
         <h1 style="font-size:24px;font-weight:700;margin:0">🎁 هدية اليوم</h1>
         <p style="margin:8px 0 0;opacity:.9;font-size:14px">
-          كل يوم لك هدية من مطعم قريب منك. الخصم يُكشف عند الفتح فقط.</p>
+          كل يوم لك هدية من منشأة قريبة منك. قيمة الهدية تُكشف عند الفتح فقط.</p>
         <div style="height:1px;background:rgba(255,255,255,.3);margin:20px 0 14px"></div>
         <button class="btn btn-lg" id="openBtn"
           style="background:#fff;color:var(--orange-deep)">افتح هديتك</button>
@@ -91,9 +91,9 @@ function stageClosed() {
         </div>
         <span class="badge badge-orange">بلا تسجيل</span>
 ${[[1,'🎁','افتح هدية واحدة كل يوم'],
-           [2,'🍽️','تظهر لك هدية من مطعم قريب'],
-           [3,'🛒','اطلب من منيو المطعم مباشرة'],
-           [4,'💵','الدفع يتم مع المطعم مباشرة']].map(([n,ico,t]) => `
+           [2,'🏪','تظهر لك هدية من منشأة قريبة'],
+           [3,'🛒','اطلب من قائمتها مباشرة'],
+           [4,'💵','الدفع يتم مباشرة مع المنشأة']].map(([n,ico,t]) => `
           <div class="flex" style="gap:10px;align-items:center">
             <span style="width:30px;height:30px;border-radius:9px;background:var(--peach);
               color:var(--orange-deep);display:grid;place-items:center">${ico}</span>
@@ -109,7 +109,7 @@ function stageNoOffer() {
     <div class="card center">
       <div style="font-size:44px">⏳</div>
       <h2 style="font-size:19px;font-weight:700;margin:10px 0 4px">لا توجد هدية متاحة حالياً</h2>
-      <p class="muted small">حاول لاحقاً. قد تكون عروض اليوم قد انتهت أو أن المطاعم القريبة
+      <p class="muted small">حاول لاحقاً. قد تكون عروض اليوم قد انتهت أو أن المنشآت القريبة
         نفدت من عروضها.</p>
       <button class="btn btn-ghost mt" onclick="location.reload()">تحديث</button>
     </div>`;
@@ -117,12 +117,30 @@ function stageNoOffer() {
 
 function stageOpened(d) {
   const g = d.gift, r = d.restaurant, o = d.offer || {};
+
+  // الهدية قد تكون: خصم % / مبلغ ثابت / صنف مجاني
+  let bigValue, bigUnit, headline;
+  if (g.kind === 'free_item') {
+    bigValue = '🎁';
+    bigUnit = '';
+    headline = g.gift_label || 'صنف مجاني';
+  } else if (g.kind === 'fixed_amount') {
+    bigValue = esc(g.discount);
+    bigUnit = 'ر.س';
+    headline = `هدية بمبلغ ثابت من ${esc(r.name)}`;
+  } else {
+    bigValue = esc(g.discount);
+    bigUnit = '%';
+    headline = `خصم من ${esc(r.name)}`;
+  }
+
   return `
     <div class="reveal">
       <div class="gift-box">🎁</div>
       <p class="small muted" style="margin:0">🎁 هديتك اليوم</p>
-      <div class="discount-value">${esc(g.discount)}%</div>
-      <p style="margin:2px 0 0;font-weight:600">خصم من ${esc(r.name)}</p>
+      <div class="discount-value">${bigValue}
+        ${bigUnit ? `<span style="font-size:24px">${bigUnit}</span>` : ''}</div>
+      <p style="margin:2px 0 0;font-weight:600">${headline}</p>
     </div>
 
     <div class="card mt">
@@ -130,18 +148,23 @@ function stageOpened(d) {
         ${r.logo_url ? `<img src="${esc(r.logo_url)}" alt=""
             style="width:56px;height:56px;border-radius:14px;object-fit:cover;flex:none">`
           : `<div style="width:56px;height:56px;border-radius:14px;background:var(--peach);
-              color:var(--orange-deep);display:grid;place-items:center;font-size:24px;flex:none">🍽️</div>`}
+              color:var(--orange-deep);display:grid;place-items:center;font-size:24px;flex:none">🏪</div>`}
         <div class="grow">
           <div style="font-weight:700;font-size:16px">${esc(r.name)}</div>
           <div class="small muted">${esc(r.address || 'بريدة')}</div>
         </div>
       </div>
 
-      ${o.description ? `<p class="small muted mt">${esc(o.description)}</p>` : ''}
+      ${o.title ? `<p class="small muted mt">${esc(o.title)}</p>` : ''}
+      ${o.description ? `<p class="small muted">${esc(o.description)}</p>` : ''}
+
+      ${g.kind === 'free_item' ? `<div class="alert alert-ok mt">
+        ✅ ستُضاف هديتك للطلب تلقائياً عند إتمام الطلب.
+        ${g.gift_label ? '<br><b>' + esc(g.gift_label) + '</b>' : ''}</div>` : ''}
 
       <div class="flex mt" style="gap:8px;flex-wrap:wrap">
         ${r.pickup_enabled ? '<span class="badge badge-green">استلام متاح</span>' : ''}
-        ${r.delivery_enabled ? '<span class="badge badge-blue">توصيل المطعم</span>' : ''}
+        ${r.delivery_enabled ? '<span class="badge badge-blue">توصيل المنشأة</span>' : ''}
         <span class="badge">التحضير ~${esc(r.prep_time_min)} دقيقة</span>
         ${o.expires_at ? `<span class="badge badge-orange">ينتهي ${new Date(o.expires_at)
           .toLocaleDateString('ar-SA')}</span>` : ''}
@@ -149,7 +172,7 @@ function stageOpened(d) {
 
       <button class="btn btn-primary btn-block btn-lg mt" id="orderNow">اطلب الآن</button>
       ${g.redeemed ? '<div class="alert alert-ok mt mb">تم استخدام هذه الهدية في طلب.</div>' : ''}
-      <p class="hint center mt">الدفع يتم مباشرة للمطعم. لا يوجد دفع إلكتروني عبر المنصة.</p>
+      <p class="hint center mt">الدفع يتم مباشرة مع المنشأة. لا يوجد دفع إلكتروني عبر المنصة.</p>
     </div>`;
 }
 
@@ -160,6 +183,11 @@ async function render() {
   $('#openBtn').onclick = open;
 }
 
+const OPEN_ERRORS = {
+  device_required: 'تعذّر التعرّف على هذا الجهاز. تأكد أن المتصفح يسمح بالتخزين المحلي.',
+  no_offers_available: null   // له رسالة ودّية خاصة
+};
+
 async function open() {
   const btn = $('#openBtn');
   btn.disabled = true;
@@ -167,11 +195,28 @@ async function open() {
   const { data, error } = await sb.rpc('open_daily_gift', {
     p_device: deviceId(), p_area: areaId()
   });
-  if (error || !data?.ok) { stage.innerHTML = stageNoOffer(); return; }
+  if (error) {
+    stage.innerHTML = stageError('تعذّر فتح الهدية');
+    return;
+  }
+  if (!data?.ok) {
+    if (data.error === 'no_offers_available') { stage.innerHTML = stageNoOffer(); return; }
+    stage.innerHTML = stageError(
+      OPEN_ERRORS[data.error] || 'تعذّر فتح الهدية حالياً');
+    return;
+  }
   setGift(data);
   stage.innerHTML = stageOpened(data);
   wire(data);
   toast('🎁 لديك هدية اليوم!');
+}
+
+function stageError(msg) {
+  return `<div class="card center">
+    <div style="font-size:40px">⚠️</div>
+    <h2 style="font-size:18px;font-weight:700;margin:10px 0 4px">${esc(msg)}</h2>
+    <button class="btn btn-ghost mt" onclick="location.reload()">إعادة المحاولة</button>
+  </div>`;
 }
 
 function wire(d) {
@@ -183,10 +228,7 @@ function wire(d) {
 
 await loadAreas();
 await render();
-
-if ('serviceWorker' in navigator && location.protocol === 'https:') {
-  navigator.serviceWorker.register('sw.js').catch(() => {});
-}
+initPWA();
 </script>
 </body>
 </html>

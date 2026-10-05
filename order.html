@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="ar" dir="rtl">
 <head>
 <meta charset="UTF-8">
@@ -22,13 +22,13 @@
 <script src="assets/js/vendor/supabase.js"></script>
 <script type="module">
 import { sb, deviceId, sar, dt, STATUS_AR, STATUS_CLASS } from './assets/js/core.js';
-import { $, esc, requireConfig, customerNav } from './assets/js/ui.js';
+import { $, esc, requireConfig, customerNav, initPWA } from './assets/js/ui.js';
 
 document.body.insertAdjacentHTML('beforeend', customerNav('orders'));
 if (!requireConfig()) throw new Error('not configured');
 
 const code = new URLSearchParams(location.search).get('code');
-const STEPS = [['new','تم الإرسال'], ['accepted','قبل المطعم'], ['preparing','قيد التجهيز'],
+const STEPS = [['new','تم الإرسال'], ['accepted','قبل المنشأة'], ['preparing','قيد التجهيز'],
                ['ready','جاهز'], ['completed','مكتمل']];
 
 async function load() {
@@ -62,15 +62,15 @@ async function load() {
       </div>`}
 
     <div class="card mt">
-      <div class="between"><span>المطعم</span><span style="font-weight:600">${esc(r.name)}</span></div>
+      <div class="between"><span>المنشأة</span><span style="font-weight:600">${esc(r.name)}</span></div>
       <div class="between small muted"><span>طريقة الاستلام</span>
-        <span>${o.order_type === 'pickup' ? 'استلام من المطعم' : 'توصيل المطعم'}</span></div>
+        <span>${o.order_type === 'pickup' ? 'استلام من المنشأة' : 'توصيل المنشأة'}</span></div>
       ${o.pickup_slot ? `<div class="between small muted"><span>وقت الاستلام</span>
         <span dir="ltr">${esc(o.pickup_slot)}</span></div>` : ''}
       ${o.address ? `<div class="between small muted"><span>العنوان</span>
         <span>${esc(o.address)}</span></div>` : ''}
       ${r.phone ? `<a class="btn btn-ghost btn-block mt" href="tel:${esc(r.phone)}"
-        >📞 اتصال بالمطعم</a>` : ''}
+        >📞 اتصال بالمنشأة</a>` : ''}
     </div>
 
     <div class="card mt">
@@ -100,6 +100,11 @@ async function load() {
 }
 
 await load();
+</script>
+</body>
+</html>
+
+initPWA();
 </script>
 </body>
 </html>

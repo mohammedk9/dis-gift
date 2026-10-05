@@ -129,6 +129,40 @@ export function staffNav(active, links) {
     `<a class="tab ${active === k ? 'active' : ''}" href="${href}">${esc(lbl)}</a>`).join('')}</div>`;
 }
 
+/* ---------- PWA: install + service worker ---------- */
+export function initPWA() {
+  if ('serviceWorker' in navigator && location.protocol === 'https:') {
+    navigator.serviceWorker.register('/sw.js').catch(() => {});
+  } else if ('serviceWorker' in navigator && location.hostname === 'localhost') {
+    navigator.serviceWorker.register('/sw.js').catch(() => {});
+  }
+
+  let deferred = null;
+  window.addEventListener('beforeinstallprompt', e => {
+    e.preventDefault();
+    deferred = e;
+    if (localStorage.getItem('hg_pwa_dismissed')) return;
+    // زر تثبيت هادئ أسفل الصفحة
+    const bar = document.createElement('div');
+    bar.className = 'pwa-bar';
+    bar.innerHTML = `<span class="grow">📲 ثبّت «هدية» كتطبيق على جهازك</span>
+      <button class="btn btn-sm btn-primary" id="pwa-yes">تثبيت</button>
+      <button class="btn btn-sm btn-ghost" id="pwa-no">×</button>`;
+    document.body.appendChild(bar);
+    bar.querySelector('#pwa-yes').onclick = async () => {
+      bar.remove();
+      deferred.prompt();
+      await deferred.userChoice;
+      deferred = null;
+    };
+    bar.querySelector('#pwa-no').onclick = () => {
+      bar.remove();
+      localStorage.setItem('hg_pwa_dismissed', '1');
+    };
+    setTimeout(() => bar.remove(), 20000);
+  });
+}
+
 export function header(title, back = '/') {
   return `<header class="nav"><div class="container nav-inner">
     <a class="brand" href="${back}">

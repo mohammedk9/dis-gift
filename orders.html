@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="ar" dir="rtl">
 <head>
 <meta charset="UTF-8">
@@ -21,7 +21,7 @@
 <script src="assets/js/vendor/supabase.js"></script>
 <script type="module">
 import { sb, deviceId, sar, dt, STATUS_AR, STATUS_CLASS } from './assets/js/core.js';
-import { $, esc, requireConfig, customerNav } from './assets/js/ui.js';
+import { $, esc, requireConfig, customerNav, initPWA } from './assets/js/ui.js';
 
 $('#nav').innerHTML = customerNav('orders');
 if (!requireConfig()) throw new Error('not configured');
@@ -49,6 +49,11 @@ $('#app').innerHTML = `
   : `<div class="empty"><div class="empty-ico">📋</div>
      <p>لا توجد طلبات بعد.</p>
      <a class="btn btn-primary mt" href="gift.html">🎁 افتح هديتك</a></div>`}`;
+</script>
+</body>
+</html>
+
+initPWA();
 </script>
 </body>
 </html>

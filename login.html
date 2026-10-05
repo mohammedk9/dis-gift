@@ -82,8 +82,19 @@ $('#forgot').onclick = async () => {
 
 $('#signupR').onclick = async () => {
   const close = modal(`
-    <h3 class="modal-title">تسجيل مطعم جديد</h3>
-    <div class="field"><label class="label">اسم المطعم</label>
+    <h3 class="modal-title">تسجيل منشأة جديدة</h3>
+    <div class="field"><label class="label">نوع النشاط</label>
+      <select class="input" id="r_biz">
+        <option value="restaurant">🍽️ مطعم</option>
+        <option value="cafe">☕ كافيه</option>
+        <option value="salon">💇 صالون</option>
+        <option value="store">🏪 متجر</option>
+        <option value="services">🛠️ خدمات</option>
+        <option value="other">📦 أخرى</option>
+      </select>
+      <p class="hint">المنصة لأي منشأة محلية في بريدة، لا للمطاعم فقط.</p>
+    </div>
+    <div class="field"><label class="label">اسم المنشأة</label>
       <input class="input" id="r_name"></div>
     <div class="field"><label class="label">البريد الإلكتروني</label>
       <input class="input" id="r_email" type="email"></div>
@@ -96,9 +107,9 @@ $('#signupR').onclick = async () => {
     <div class="field"><label class="label">الحي</label>
       <select class="input" id="r_area"><option value="">— اختر —</option></select></div>
     <label class="check"><input type="checkbox" id="r_pickup" checked> استلام متاح</label>
-    <label class="check"><input type="checkbox" id="r_delivery"> توصيل من المطعم</label>
+    <label class="check"><input type="checkbox" id="r_delivery"> توصيل من Premises</label>
     <button class="btn btn-primary btn-block mt" id="r_go">إنشاء الحساب</button>
-    <p class="hint">التسجيل مجاني. المطعم يبدأ بحالة «بانتظار التفعيل» حتى يفعّله الإدارة.</p>`);
+    <p class="hint">التسجيل مجاني. المنشأة تبدأ بحالة «بانتظار التفعيل» حتى يفعّلها الإدارة.</p>`);
 
   const m = document.querySelector('.modal-bg:last-child .modal');
   const { data: areas } = await sb.rpc('active_areas');
@@ -108,6 +119,7 @@ $('#signupR').onclick = async () => {
   m.querySelector('#r_go').onclick = async () => {
     const p = {
       name: m.querySelector('#r_name').value.trim(),
+      biz: m.querySelector('#r_biz').value,
       email: m.querySelector('#r_email').value.trim(),
       pass: m.querySelector('#r_pass').value,
       phone: m.querySelector('#r_phone').value.trim(),
@@ -135,9 +147,9 @@ $('#signupR').onclick = async () => {
     const { data: res } = await sb.rpc('register_restaurant', {
       p_name: p.name, p_phone: p.phone, p_address: p.addr,
       p_area: p.area ? Number(p.area) : null,
-      p_pickup: p.pickup, p_delivery: p.delivery
+      p_pickup: p.pickup, p_delivery: p.delivery, p_business: p.biz
     });
-    if (!res?.ok) return toast(res?.error || 'تعذّر إنشاء المطعم');
+    if (!res?.ok) return toast(res?.error || 'تعذّر إنشاء المنشأة');
     close();
     toast('✅ تم التسجيل — بانتظار تفعيل الإدارة');
     setTimeout(() => location.replace('/r/'), 900);

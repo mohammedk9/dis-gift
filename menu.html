@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="ar" dir="rtl">
 <head>
 <meta charset="UTF-8">
@@ -24,7 +24,7 @@
 <script src="assets/js/vendor/supabase.js"></script>
 <script type="module">
 import { sb, deviceId, getGift, getCart, setQty, cartTotal, sar } from './assets/js/core.js';
-import { $, esc, toast, requireConfig, customerNav } from './assets/js/ui.js';
+import { $, esc, toast, requireConfig, customerNav, initPWA } from './assets/js/ui.js';
 
 document.body.insertAdjacentHTML('beforeend', customerNav('gift'));
 if (!requireConfig()) throw new Error('not configured');
@@ -38,7 +38,7 @@ $('#discBadge').textContent = `خصم ${gift.gift.discount}%`;
 const { data: menu } = await sb.rpc('restaurant_menu', { p_restaurant: rid });
 if (!menu?.restaurant) {
   $('#app').innerHTML = `<div class="empty"><div class="empty-ico">🍽️</div>
-    <p>هذا المطعم غير متاح حالياً.</p>
+    <p>هذه المنشأة غير متاحة حالياً.</p>
     <a class="btn btn-ghost mt" href="gift.html">العودة للهدية</a></div>`;
   throw new Error('no restaurant');
 }
@@ -60,7 +60,7 @@ $('#app').innerHTML = `
         <div class="small muted">${esc(R.address || 'بريدة')}</div>
         <div class="flex" style="gap:6px;margin-top:5px;flex-wrap:wrap">
           ${R.pickup_enabled ? '<span class="badge badge-green">استلام</span>' : ''}
-          ${R.delivery_enabled ? '<span class="badge badge-blue">توصيل المطعم</span>' : ''}
+          ${R.delivery_enabled ? '<span class="badge badge-blue">توصيل المنشأة</span>' : ''}
           <span class="badge">~${esc(R.prep_time_min)} دقيقة</span>
         </div>
       </div>
@@ -155,3 +155,8 @@ function qtyHtml(id) {
   return it ? `<button data-act="dec">−</button><span>${it.qty}</span><button data-act="inc">+</button>`
             : `<button data-act="add">＋ إضافة</button>`;
 }
+
+initPWA();
+</script>
+</body>
+</html>

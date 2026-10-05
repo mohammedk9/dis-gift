@@ -1,21 +1,25 @@
 {
   "name": "هدية — هدية اليوم",
   "short_name": "هدية",
-  "description": "هدية يومية من مطعم قريب منك في بريدة. اكتشف، اطلب مباشرة.",
+  "description": "هدية يومية من منشأة قريبة منك في بريدة. اكتشف، اطلب مباشرة.",
   "lang": "ar",
   "dir": "rtl",
+  "id": "/",
   "start_url": "/gift.html",
   "scope": "/",
   "display": "standalone",
   "orientation": "portrait",
   "background_color": "#fbf7f0",
   "theme_color": "#e86a33",
+  "categories": ["shopping", "food", "lifestyle"],
   "icons": [
-    {
-      "src": "assets/icon.svg",
-      "sizes": "any",
-      "type": "image/svg+xml",
-      "purpose": "any maskable"
-    }
+    { "src": "assets/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "assets/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "assets/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" },
+    { "src": "assets/icon.svg",   "sizes": "any",     "type": "image/svg+xml", "purpose": "any" }
+  ],
+  "shortcuts": [
+    { "name": "🎁 هدية اليوم", "url": "/gift.html" },
+    { "name": "📋 طلباتي", "url": "/orders.html" }
   ]
 }

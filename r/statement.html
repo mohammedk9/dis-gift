@@ -1,9 +1,9 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="ar" dir="rtl">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>كشف الحساب | لوحة المطعم</title>
+<title>كشف الحساب | لوحة المنشأة</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Arabic:wght@300;400;500;600;700&display=swap" rel="stylesheet">
@@ -78,7 +78,7 @@ $('#app').innerHTML = `
   <div class="card" style="padding:0">
     <div class="table-wrap"><table>
       <thead><tr><th>الطلب</th><th>القيمة</th><th>الخصم</th><th>رسوم المنصة</th>
-        <th>صافي المطعم</th><th>الحالة</th><th>التاريخ</th></tr></thead>
+        <th>صافي المنشأة</th><th>الحالة</th><th>التاريخ</th></tr></thead>
       <tbody>
         ${(data.lines || []).map(l => `<tr>
           <td><b>#${esc(l.code)}</b></td>

@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="ar" dir="rtl">
 <head>
 <meta charset="UTF-8">
@@ -64,7 +64,7 @@ $('#app').innerHTML = `
 
   <div class="card" style="padding:0">
     <div class="table-wrap"><table>
-      <thead><tr><th>الطلب</th><th>المطعم</th><th>الحالة</th><th>النوع</th>
+      <thead><tr><th>الطلب</th><th>المنشأة</th><th>الحالة</th><th>النوع</th>
         <th>الإجمالي</th><th>الخصم</th><th>الرسوم</th><th>التاريخ</th></tr></thead>
       <tbody>
         ${list.map(o => `<tr>
@@ -82,7 +82,7 @@ $('#app').innerHTML = `
   </div>
 
   <p class="hint mt">الرسوم تظهر فقط للطلبات المكتملة.
-    الطلبات الملغاة أو التي لم يكتملها المطعم لا تنتج أي رسوم.</p>`;
+    الطلبات الملغاة أو التي لم تكملها المنشأة لا تنتج أي رسوم.</p>`;
 </script>
 </body>
 </html>
