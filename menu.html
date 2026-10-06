@@ -21,6 +21,7 @@
 
 <main class="container page" id="app"></main>
 <div id="cartbar"></div>
+<script src="assets/js/runtime-config.js"></script>
 <script src="assets/js/vendor/supabase.js"></script>
 <script type="module">
 import { sb, deviceId, getGift, getCart, setQty, cartTotal, sar } from './assets/js/core.js';
@@ -141,21 +142,6 @@ function renderBar() {
   $('#checkout').onclick = () => { location.href = 'checkout.html'; };
 }
 renderBar();
-</script>
-</body>
-</html>
-        </div>
-        <div class="qty" data-q="${it.id}">${qtyHtml(it.id)}</div>
-      </div>`).join('')}
-  </div>`)).join('')
-  : '<div class="empty"><div class="empty-ico">📋</div><p>لا يوجد منيو متاح حالياً.</p></div>';
-
-function qtyHtml(id) {
-  const it = getCart().find(x => x.id === id);
-  return it ? `<button data-act="dec">−</button><span>${it.qty}</span><button data-act="inc">+</button>`
-            : `<button data-act="add">＋ إضافة</button>`;
-}
-
 initPWA();
 </script>
 </body>

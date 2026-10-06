@@ -1,6 +1,6 @@
 /* فحص: كل دالة لها جسم كامل (begin/end) ولها grant */
 const fs = require('fs');
-const files = ['0001_schema', '0002_rls', '0003_functions', '0004_seed']
+const files = ['0001_schema', '0002_rls', '0003_functions', '0004_seed', '0006_admin_bootstrap']
   .map(n => ({ n, sql: fs.readFileSync('supabase/migrations/' + n + '.sql', 'utf8') }));
 
 let bad = 0;

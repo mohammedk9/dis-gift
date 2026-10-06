@@ -11,23 +11,24 @@
 </head>
 <body>
 <header class="nav"><div class="container nav-inner">
-  <a class="brand" href="/r/"><span class="brand-mark">🎁</span>
+  <a class="brand" href="./"><span class="brand-mark">🎁</span>
     <span><span class="brand-name">هدية</span><br><span class="brand-sub">كشف الحساب</span></span></a>
 </div></header>
 <div id="tabs"></div>
 <main class="container" id="app" style="padding-bottom:40px"></main>
+<script src="../assets/js/runtime-config.js"></script>
 <script src="../assets/js/vendor/supabase.js"></script>
 <script type="module">
 import { sb, sar, dt } from '../assets/js/core.js';
 import { $, esc, requireConfig, guardStaff } from '../assets/js/ui.js';
 
 if (!requireConfig()) throw new Error('not configured');
-if (!await guardStaff()) throw new Error('unauthorized');
+if (!await guardStaff({ allowAdmin: false })) throw new Error('unauthorized');
 
 $('#tabs').innerHTML = `<div class="container"><div class="tabs">
-  ${[['d','اللوحة','/r/'],['o','الطلبات','/r/orders.html'],['m','المنيو','/r/menu.html'],
-     ['f','العروض','/r/offers.html'],['s','كشف الحساب','/r/statement.html'],
-     ['p','الملف','/r/profile.html']].map(([k,l,h]) =>
+  ${[['d','اللوحة','./'],['o','الطلبات','./orders.html'],['m','المنيو','./menu.html'],
+     ['f','العروض','./offers.html'],['s','كشف الحساب','./statement.html'],
+     ['p','الملف','./profile.html']].map(([k,l,h]) =>
     `<a class="tab ${k==='s'?'active':''}" href="${h}">${l}</a>`).join('')}
 </div></div>`;
 

@@ -13,75 +13,232 @@
 <header class="nav"><div class="container nav-inner">
   <a class="brand" href="index.html">
     <span class="brand-mark">🎁</span>
-    <span><span class="brand-name">هدية</span><br><span class="brand-sub">دخول المطاعم والإدارة</span></span>
+    <span><span class="brand-name">هدية</span><br><span class="brand-sub">تسجيل الدخول</span></span>
   </a>
 </div></header>
 <main class="container page" style="max-width:520px" id="app"></main>
+<script src="assets/js/runtime-config.js"></script>
 <script src="assets/js/vendor/supabase.js"></script>
 <script type="module">
-import { sb } from './assets/js/core.js';
+import { sb, appUrl } from './assets/js/core.js';
 import { $, esc, toast, modal, requireConfig, currentSession } from './assets/js/ui.js';
 
 if (!requireConfig()) throw new Error('not configured');
 
-const next = new URLSearchParams(location.search).get('next') || '/r/';
-const err  = new URLSearchParams(location.search).get('err');
+const params = new URLSearchParams(location.search);
+const requestedNext = params.get('next');
+const appRootPath = new URL(appUrl(''), location.origin).pathname;
+let next = '';
+if (requestedNext) {
+  const requestedPath = requestedNext.startsWith('/') && !requestedNext.startsWith('//')
+    ? requestedNext : appUrl(requestedNext);
+  const candidate = new URL(requestedPath, location.origin);
+  if (candidate.origin === location.origin && candidate.pathname.startsWith(appRootPath))
+    next = candidate.pathname + candidate.search + candidate.hash;
+}
+const join = params.get('join') === '1';
+let mode = params.get('mode') === 'business' || join || /\/r\//.test(next) || /\/admin\//.test(next)
+  ? 'business' : 'customer';
+const err  = params.get('err');
 const MSG = {
-  not_restaurant: 'هذا الحساب ليس حساب مطعم.',
-  no_restaurant: 'لا يوجد مطعم مرتبط بهذا الحساب.'
+  not_restaurant: 'هذا الحساب غير مرتبط بمنشأة.',
+  no_restaurant: 'لا توجد منشأة مرتبطة بهذا الحساب.'
 };
 
 $('#app').innerHTML = `
   <div class="page-head center">
-    <h1 class="page-title">تسجيل الدخول</h1>
-    <p class="page-sub">للمطاعم والإدارة فقط — العميل يستخدم المنصة بلا تسجيل</p>
+    <h1 class="page-title">مرحباً بك</h1>
+    <p class="page-sub">اختر نوع الحساب للمتابعة</p>
   </div>
 
   ${err ? `<div class="alert alert-error">${esc(MSG[err] || 'تعذّر الدخول')}</div>` : ''}
 
-  <div class="card">
-    <div class="field"><label class="label">البريد الإلكتروني</label>
-      <input class="input" id="email" type="email" inputmode="email"
-        placeholder="you@restaurant.com"></div>
-    <div class="field"><label class="label">كلمة المرور</label>
-      <input class="input" id="pass" type="password" placeholder="••••••••"></div>
-    <button class="btn btn-primary btn-block btn-lg" id="signin">دخول</button>
-    <div class="flex mt" style="gap:8px">
-      <button class="btn btn-ghost grow btn-sm" id="signupR">حساب مطعم جديد</button>
-      <button class="btn btn-ghost grow btn-sm" id="forgot">نسيت كلمة المرور</button>
-    </div>
+  <div class="tabs" role="tablist" aria-label="نوع الحساب">
+    <button class="tab" id="customerTab" type="button" role="tab">مستخدم</button>
+    <button class="tab" id="businessTab" type="button" role="tab">مطعم / إدارة</button>
   </div>
 
-  <div class="card mt">
-    <div style="font-weight:700">رسالة للمطاعم</div>
-    <p class="small muted">نحن لا نبيعك برنامج طلبات فقط. نحاول أن نجلب لك عميلاً من خلال عرض محلي،
-      ثم نحوّل هذا الاكتشاف إلى طلب مباشر.</p>
-    <p class="small muted">لا تدفع عند التسجيل أو إضافة المنيو أو ظهور عرضك.
-      تدفع فقط عندما يكتمل الطلب.</p>
-  </div>`;
+  <section class="card" id="customerPanel" role="tabpanel">
+    <h2 class="modal-title">دخول المستخدم</h2>
+    <form id="customerForm">
+      <div class="field"><label class="label" for="customerEmail">البريد الإلكتروني</label>
+        <input class="input" id="customerEmail" type="email" inputmode="email" autocomplete="username" required></div>
+      <div class="field"><label class="label" for="customerPass">كلمة المرور</label>
+        <input class="input" id="customerPass" type="password" autocomplete="current-password" required></div>
+      <button class="btn btn-primary btn-block btn-lg" id="customerSignin" type="submit">دخول المستخدم</button>
+    </form>
+    <div class="flex mt" style="gap:8px">
+      <button class="btn btn-ghost grow btn-sm" id="signupCustomer" type="button">إنشاء حساب مستخدم</button>
+      <button class="btn btn-ghost grow btn-sm" id="customerForgot" type="button">نسيت كلمة المرور</button>
+    </div>
+    <p class="hint mt">يمكنك أيضاً تصفح العروض وفتح الهدية دون تسجيل الدخول.</p>
+  </section>
 
-if (await currentSession()) location.replace(next);
+  <section class="card" id="businessPanel" role="tabpanel" hidden>
+    <h2 class="modal-title">دخول المطعم أو الإدارة</h2>
+    <form id="businessForm">
+      <div class="field"><label class="label" for="businessEmail">البريد الإلكتروني</label>
+        <input class="input" id="businessEmail" type="email" inputmode="email" autocomplete="username" required></div>
+      <div class="field"><label class="label" for="businessPass">كلمة المرور</label>
+        <input class="input" id="businessPass" type="password" autocomplete="current-password" required></div>
+      <button class="btn btn-primary btn-block btn-lg" id="businessSignin" type="submit">دخول المطعم / الإدارة</button>
+    </form>
+    <div class="flex mt" style="gap:8px">
+      <button class="btn btn-ghost grow btn-sm" id="signupR" type="button">تسجيل منشأة جديدة</button>
+      <button class="btn btn-ghost grow btn-sm" id="businessForgot" type="button">نسيت كلمة المرور</button>
+    </div>
+  </section>`;
 
-$('#signin').onclick = async () => {
-  const email = $('#email').value.trim(), pass = $('#pass').value;
+function selectMode(value) {
+  mode = value;
+  $('#customerTab').classList.toggle('active', mode === 'customer');
+  $('#businessTab').classList.toggle('active', mode === 'business');
+  $('#customerTab').setAttribute('aria-selected', String(mode === 'customer'));
+  $('#businessTab').setAttribute('aria-selected', String(mode === 'business'));
+  $('#customerPanel').hidden = mode !== 'customer';
+  $('#businessPanel').hidden = mode !== 'business';
+}
+$('#customerTab').onclick = () => selectMode('customer');
+$('#businessTab').onclick = () => selectMode('business');
+selectMode(mode);
+
+async function registerRestaurant(p) {
+  const { data: res, error } = await sb.rpc('register_restaurant', {
+    p_name: p.name, p_phone: p.phone, p_address: p.addr,
+    p_area: p.area ? Number(p.area) : null,
+    p_pickup: p.pickup, p_delivery: p.delivery, p_business: p.biz
+  });
+  if (error) return error.message;
+  if (!res?.ok) return res?.error || 'تعذّر إنشاء المنشأة';
+  return null;
+}
+
+async function finishPendingRegistration() {
+  const raw = localStorage.getItem('hg_pending_restaurant');
+  if (!raw) return true;
+  try {
+    const pending = JSON.parse(raw);
+    const session = await currentSession();
+    if (!session || pending.email?.toLowerCase() !== session.user.email?.toLowerCase()) {
+      toast('سجّل الدخول بالبريد الذي بدأ تسجيل المنشأة');
+      return false;
+    }
+    const message = await registerRestaurant(pending);
+    if (message) { toast(message); return false; }
+    localStorage.removeItem('hg_pending_restaurant');
+    toast('✅ تم التسجيل — بانتظار تفعيل الإدارة');
+    setTimeout(() => location.replace(appUrl('r/')), 900);
+    return false;
+  } catch {
+    toast('تعذّر إكمال تسجيل المنشأة');
+    return false;
+  }
+}
+
+async function destinationFor(audience) {
+  const session = await currentSession();
+  if (!session) return null;
+  const { data: profile } = await sb.from('profiles')
+    .select('role').eq('id', session.user.id).maybeSingle();
+  const { data: admin } = await sb.from('admin_users')
+    .select('user_id').eq('user_id', session.user.id).maybeSingle();
+  const isAdmin = !!admin;
+  const role = profile?.role;
+
+  if (audience === 'customer' && role === 'customer') {
+    return next && !/\/(r|admin)\//.test(next) ? next : appUrl('index.html');
+  }
+  if (audience === 'business' && isAdmin) {
+    return next.includes('/admin/') ? next : appUrl('admin/');
+  }
+  if (audience === 'business' && role === 'restaurant') {
+    return next && !next.includes('/admin/') ? next : appUrl('r/');
+  }
+  return null;
+}
+
+if (await currentSession()) {
+  if (!await finishPendingRegistration()) {
+    // التسجيل المعلّق يتولى رسالته وتوجيهه بنفسه.
+  } else {
+    const destination = await destinationFor(mode);
+    if (destination) location.replace(destination);
+  }
+}
+
+async function signIn(audience) {
+  const prefix = audience === 'customer' ? 'customer' : 'business';
+  const email = $(`#${prefix}Email`).value.trim(), pass = $(`#${prefix}Pass`).value;
   if (!email || !pass) return toast('أدخل البريد وكلمة المرور');
-  const btn = $('#signin');
+  const btn = $(`#${prefix}Signin`);
+  const label = audience === 'customer' ? 'دخول المستخدم' : 'دخول المطعم / الإدارة';
   btn.disabled = true; btn.innerHTML = '<span class="spin"></span>';
   const { error } = await sb.auth.signInWithPassword({ email, password: pass });
-  if (error) { btn.disabled = false; btn.textContent = 'دخول'; return toast('بيانات الدخول غير صحيحة'); }
+  if (error) { btn.disabled = false; btn.textContent = label; return toast('بيانات الدخول غير صحيحة'); }
   toast('✅ تم الدخول');
-  setTimeout(() => location.replace(next), 400);
-};
+  if (!await finishPendingRegistration()) return;
+  const destination = await destinationFor(audience);
+  if (!destination) {
+    btn.disabled = false; btn.textContent = label;
+    return toast(audience === 'customer'
+      ? 'هذا ليس حساب مستخدم. اختر دخول المطعم / الإدارة.'
+      : 'هذا الحساب غير مرتبط بمطعم أو بصلاحية الإدارة.');
+  }
+  setTimeout(() => location.replace(destination), 300);
+}
 
-$('#forgot').onclick = async () => {
-  const email = $('#email').value.trim();
+$('#customerForm').onsubmit = event => { event.preventDefault(); signIn('customer'); };
+$('#businessForm').onsubmit = event => { event.preventDefault(); signIn('business'); };
+
+async function resetPassword(audience) {
+  const email = $(`#${audience === 'customer' ? 'customer' : 'business'}Email`).value.trim();
   if (!email) return toast('أدخل بريدك أولاً');
-  await sb.auth.resetPasswordForEmail(email, { redirectTo: location.origin + '/login.html' });
+  const { error } = await sb.auth.resetPasswordForEmail(email, {
+    redirectTo: new URL('login.html', location.href).href
+  });
+  if (error) return toast('تعذّر إرسال رابط الاستعادة');
   toast('تم إرسال رابط الاستعادة إن كان الحساب موجوداً');
+}
+$('#customerForgot').onclick = () => resetPassword('customer');
+$('#businessForgot').onclick = () => resetPassword('business');
+
+$('#signupCustomer').onclick = () => {
+  modal(`<h3 class="modal-title">إنشاء حساب مستخدم</h3>
+    <div class="field"><label class="label" for="c_name">الاسم</label>
+      <input class="input" id="c_name" autocomplete="name"></div>
+    <div class="field"><label class="label" for="c_email">البريد الإلكتروني</label>
+      <input class="input" id="c_email" type="email" autocomplete="email"></div>
+    <div class="field"><label class="label" for="c_pass">كلمة المرور</label>
+      <input class="input" id="c_pass" type="password" autocomplete="new-password"></div>
+    <button class="btn btn-primary btn-block mt" id="c_create">إنشاء الحساب</button>`, {
+    onOpen: m => { m.querySelector('#c_create').onclick = async event => {
+      const button = event.currentTarget;
+      const name = m.querySelector('#c_name').value.trim();
+      const email = m.querySelector('#c_email').value.trim();
+      const password = m.querySelector('#c_pass').value;
+      if (!name || !email || password.length < 6)
+        return toast('أدخل الاسم والبريد وكلمة مرور من 6 أحرف على الأقل');
+      button.disabled = true;
+      const { data, error } = await sb.auth.signUp({
+        email, password,
+        options: {
+          data: { full_name: name },
+          emailRedirectTo: new URL('login.html?mode=customer', location.href).href
+        }
+      });
+      if (error) { button.disabled = false; return toast(error.message); }
+      if (!data.session) {
+        return toast('تحقق من بريدك الإلكتروني لتفعيل الحساب، ثم سجّل الدخول.');
+      }
+      const destination = await destinationFor('customer');
+      if (!destination) return toast('تعذّر التحقق من صلاحية حساب المستخدم');
+      location.replace(destination);
+    }; }
+  });
 };
 
 $('#signupR').onclick = async () => {
-  const close = modal(`
+  modal(`
     <h3 class="modal-title">تسجيل منشأة جديدة</h3>
     <div class="field"><label class="label">نوع النشاط</label>
       <select class="input" id="r_biz">
@@ -107,7 +264,7 @@ $('#signupR').onclick = async () => {
     <div class="field"><label class="label">الحي</label>
       <select class="input" id="r_area"><option value="">— اختر —</option></select></div>
     <label class="check"><input type="checkbox" id="r_pickup" checked> استلام متاح</label>
-    <label class="check"><input type="checkbox" id="r_delivery"> توصيل من Premises</label>
+    <label class="check"><input type="checkbox" id="r_delivery"> توصيل من المنشأة</label>
     <button class="btn btn-primary btn-block mt" id="r_go">إنشاء الحساب</button>
     <p class="hint">التسجيل مجاني. المنشأة تبدأ بحالة «بانتظار التفعيل» حتى يفعّلها الإدارة.</p>`);
 
@@ -134,9 +291,17 @@ $('#signupR').onclick = async () => {
 
     const { data: s, error } = await sb.auth.signUp({
       email: p.email, password: p.pass,
-      options: { data: { full_name: p.name, phone: p.phone } }
+      options: {
+        data: { full_name: p.name, phone: p.phone },
+        emailRedirectTo: new URL('login.html', location.href).href
+      }
     });
     if (error) return toast(error.message);
+
+    localStorage.setItem('hg_pending_restaurant', JSON.stringify({
+      email: p.email, name: p.name, biz: p.biz, phone: p.phone, addr: p.addr,
+      area: p.area, pickup: p.pickup, delivery: p.delivery
+    }));
 
     if (!s.session) {
       const { error: e2 } = await sb.auth.signInWithPassword({
@@ -144,19 +309,11 @@ $('#signupR').onclick = async () => {
       if (e2) return toast('تحقق من بريدك لتفعيل الحساب ثم سجّل الدخول');
     }
 
-    const { data: res } = await sb.rpc('register_restaurant', {
-      p_name: p.name, p_phone: p.phone, p_address: p.addr,
-      p_area: p.area ? Number(p.area) : null,
-      p_pickup: p.pickup, p_delivery: p.delivery, p_business: p.biz
-    });
-    if (!res?.ok) return toast(res?.error || 'تعذّر إنشاء المنشأة');
-    close();
-    toast('✅ تم التسجيل — بانتظار تفعيل الإدارة');
-    setTimeout(() => location.replace('/r/'), 900);
+    await finishPendingRegistration();
   };
 };
+
+if (join) document.querySelector('#signupR')?.click();
 </script>
 </body>
 </html>
-  toast('تم إرسال رابط الاستعادة إن كان الحساب موجوداً');
-};

@@ -11,11 +11,12 @@
 </head>
 <body>
 <header class="nav"><div class="container nav-inner">
-  <a class="brand" href="/admin/"><span class="brand-mark">🎁</span>
+  <a class="brand" href="./"><span class="brand-mark">🎁</span>
     <span><span class="brand-name">هدية</span><br><span class="brand-sub">الإعدادات</span></span></a>
 </div></header>
 <div id="tabs"></div>
 <main class="container" id="app" style="padding-bottom:40px"></main>
+<script src="../assets/js/runtime-config.js"></script>
 <script src="../assets/js/vendor/supabase.js"></script>
 <script type="module">
 import { sb, sar } from '../assets/js/core.js';
@@ -25,10 +26,10 @@ if (!requireConfig()) throw new Error('not configured');
 if (!await guardAdmin()) throw new Error('unauthorized');
 
 $('#tabs').innerHTML = `<div class="container"><div class="tabs">
-  ${[['d','المؤشرات','/admin/'],['r','المطاعم','/admin/restaurants.html'],
-     ['o','الطلبات','/admin/orders.html'],['f','العروض','/admin/offers.html'],
-     ['l','دفتر الحسابات','/admin/ledger.html'],['s','كشوف الحساب','/admin/statements.html'],
-     ['g','الإعدادات','/admin/settings.html']].map(([k,l,h]) =>
+  ${[['d','المؤشرات','./'],['r','المطاعم','./restaurants.html'],
+     ['o','الطلبات','./orders.html'],['f','العروض','./offers.html'],
+     ['l','دفتر الحسابات','./ledger.html'],['s','كشوف الحساب','./statements.html'],
+     ['g','الإعدادات','./settings.html']].map(([k,l,h]) =>
     `<a class="tab ${k==='g'?'active':''}" href="${h}">${l}</a>`).join('')}
 </div></div>`;
 
@@ -70,6 +71,10 @@ $('#app').innerHTML = `
       <select class="input" id="s_discount_strategy">
         <option value="uniform" ${S.discount_strategy === 'uniform' ? 'selected' : ''}>
           uniform — توزيع منتظم داخل النطاق</option>
+        <option value="bias_min" ${S.discount_strategy === 'bias_min' ? 'selected' : ''}>
+          bias_min — تميل للحد الأدنى</option>
+      </select></div>
+  </div>
 <div class="card mt">
     <div style="font-weight:700">🎯 حدود الحملات</div>
     <div class="row2">
@@ -115,6 +120,18 @@ $('#app').innerHTML = `
       <button class="btn btn-ghost" id="addArea">+</button>
     </div>
     <div id="areaList" class="mt"></div>
+  </div>
+
+  <div class="card mt">
+    <div style="font-weight:700">تغيير كلمة مرور الإدارة</div>
+    <p class="hint">بعد الدخول بكلمة مؤقتة، اختر كلمة جديدة لا تستخدمها في أي موقع آخر.</p>
+    <div class="field"><label class="label" for="newPassword">كلمة المرور الجديدة</label>
+      <input class="input" id="newPassword" type="password" autocomplete="new-password"
+        minlength="8" placeholder="8 أحرف على الأقل"></div>
+    <div class="field"><label class="label" for="confirmPassword">تأكيد كلمة المرور</label>
+      <input class="input" id="confirmPassword" type="password" autocomplete="new-password"
+        minlength="8"></div>
+    <button class="btn btn-ghost btn-block" id="changePassword" type="button">تغيير كلمة المرور</button>
   </div>`;
 
 async function saveAll() {
@@ -140,6 +157,23 @@ async function saveAll() {
 }
 $('#save').onclick = saveAll;
 
+$('#changePassword').onclick = async () => {
+  const password = $('#newPassword').value;
+  const confirmation = $('#confirmPassword').value;
+  if (password.length < 8) return toast('كلمة المرور يجب أن تكون 8 أحرف على الأقل');
+  if (password !== confirmation) return toast('كلمتا المرور غير متطابقتين');
+
+  const button = $('#changePassword');
+  button.disabled = true;
+  const { error } = await sb.auth.updateUser({ password });
+  button.disabled = false;
+  if (error) return toast('تعذّر تغيير كلمة المرور: ' + error.message);
+
+  $('#newPassword').value = '';
+  $('#confirmPassword').value = '';
+  toast('✅ تم تغيير كلمة المرور');
+};
+
 async function loadAreas() {
   const { data } = await sb.rpc('active_areas');
   $('#areaList').innerHTML = (data || []).map(a =>
@@ -158,7 +192,3 @@ await loadAreas();
 </script>
 </body>
 </html>
-        <option value="bias_min" ${S.discount_strategy === 'bias_min' ? 'selected' : ''}>
-          bias_min — تميل للحد الأدنى</option>
-      </select></div>
-  </div>

@@ -11,24 +11,25 @@
 </head>
 <body>
 <header class="nav"><div class="container nav-inner">
-  <a class="brand" href="/r/"><span class="brand-mark">🎁</span>
+  <a class="brand" href="./"><span class="brand-mark">🎁</span>
     <span><span class="brand-name">هدية</span><br><span class="brand-sub">ملف المنشأة</span></span></a>
 </div></header>
 <div id="tabs"></div>
 <main class="container" id="app" style="padding-bottom:40px"></main>
+<script src="../assets/js/runtime-config.js"></script>
 <script src="../assets/js/vendor/supabase.js"></script>
 <script type="module">
 import { sb } from '../assets/js/core.js';
 import { $, esc, toast, requireConfig, guardStaff } from '../assets/js/ui.js';
 
 if (!requireConfig()) throw new Error('not configured');
-const auth = await guardStaff();
+const auth = await guardStaff({ allowAdmin: false });
 if (!auth) throw new Error('unauthorized');
 
 $('#tabs').innerHTML = `<div class="container"><div class="tabs">
-  ${[['d','اللوحة','/r/'],['o','الطلبات','/r/orders.html'],['m','المنيو','/r/menu.html'],
-     ['f','العروض','/r/offers.html'],['s','كشف الحساب','/r/statement.html'],
-     ['p','الملف','/r/profile.html']].map(([k,l,h]) =>
+  ${[['d','اللوحة','./'],['o','الطلبات','./orders.html'],['m','المنيو','./menu.html'],
+     ['f','العروض','./offers.html'],['s','كشف الحساب','./statement.html'],
+     ['p','الملف','./profile.html']].map(([k,l,h]) =>
     `<a class="tab ${k==='p'?'active':''}" href="${h}">${l}</a>`).join('')}
 </div></div>`;
 
@@ -85,10 +86,10 @@ $('#app').innerHTML = `
   <div class="card mt">
     <h3 class="section-title" style="margin-top:0;font-size:15px">الاستلام والتوصيل</h3>
     <label class="check"><input type="checkbox" id="f_pickup"
-      ${r?.pickup_enabled ? 'checked' : ''}> استلام من Premises</label>
+      ${r?.pickup_enabled ? 'checked' : ''}> استلام من المنشأة</label>
     <label class="check"><input type="checkbox" id="f_delivery"
-      ${r?.delivery_enabled ? 'checked' : ''}> توصيل من Premises</label>
-    <p class="hint">المنصة لا تقوم بالتوصيل. «توصيل من Premises» يعني أن المنشأة هي من ينفّذ التوصيل.</p>
+      ${r?.delivery_enabled ? 'checked' : ''}> توصيل من المنشأة</label>
+    <p class="hint">المنصة لا تقوم بالتوصيل. التوصيل تنفذه المنشأة نفسها.</p>
   </div>
 
   <div class="card mt">
@@ -103,7 +104,6 @@ $('#app').innerHTML = `
 
   <div class="card mt">
     <button class="btn btn-ghost btn-block" id="logout">تسجيل الخروج</button>
-    <a class="btn btn-ghost btn-block mt" href="/login.html?next=/admin/">دخول الإدارة</a>
   </div>`;
 
 $('#save').onclick = async () => {
@@ -128,7 +128,7 @@ $('#save').onclick = async () => {
   toast('✅ تم الحفظ');
 };
 
-$('#logout').onclick = async () => { await sb.auth.signOut(); location.href = '/login.html'; };
+$('#logout').onclick = async () => { await sb.auth.signOut(); location.href = '../login.html'; };
 </script>
 </body>
 </html>

@@ -18,6 +18,7 @@
 </div></header>
 <main class="container page" id="app"></main>
 <div id="nav"></div>
+<script src="assets/js/runtime-config.js"></script>
 <script src="assets/js/vendor/supabase.js"></script>
 <script type="module">
 import { sb, deviceId, areaId, setArea, dt } from './assets/js/core.js';
@@ -68,9 +69,9 @@ $('#app').innerHTML = `
   </div>
 
   <div class="card mt">
-    <h3 class="section-title" style="margin-top:0;font-size:15px">المنشأة والإدارة</h3>
-    <a class="btn btn-ghost btn-block mb" href="login.html?next=/r/">دخول المنشأة</a>
-    <a class="btn btn-ghost btn-block" href="login.html?next=/admin/">دخول الإدارة</a>
+    <h3 class="section-title" style="margin-top:0;font-size:15px">للمنشآت</h3>
+    <p class="small muted">هل تملك منشأة محلية؟ سجّل بياناتك وابدأ بإضافة عروضك بعد التفعيل.</p>
+    <a class="btn btn-ghost btn-block" href="login.html?join=1">سجّل منشأتك أو ادخل إلى لوحتك</a>
   </div>
 
   <div class="card mt">
@@ -92,10 +93,6 @@ $('#reset').onclick = async () => {
   toast('تم المسح');
   setTimeout(() => location.href = 'gift.html', 500);
 };
-</script>
-</body>
-</html>
-
 initPWA();
 </script>
 </body>

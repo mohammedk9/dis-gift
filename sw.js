@@ -2,12 +2,14 @@
    sw.js — Service Worker بسيط (PWA)
    لا يخزّن طلبات Supabase إطلاقاً (بيانات حية)
    ============================================================ */
+const BASE = new URL('./', self.location).pathname;
 const CACHE = 'hadiya-v1';
 const SHELL = [
-  '/index.html', '/gift.html', '/orders.html', '/account.html',
-  '/assets/css/app.css', '/assets/js/core.js', '/assets/js/ui.js',
-  '/assets/js/vendor/supabase.js', '/assets/icon.svg', '/manifest.webmanifest'
-];
+  'index.html', 'gift.html', 'orders.html', 'account.html',
+  'assets/css/app.css', 'assets/js/core.js', 'assets/js/ui.js',
+  'assets/js/runtime-config.js', 'assets/js/vendor/supabase.js',
+  'assets/icon.svg', 'manifest.webmanifest'
+].map(path => new URL(path, self.location).pathname);
 
 self.addEventListener('install', e => {
   e.waitUntil(caches.open(CACHE).then(c => c.addAll(SHELL)).catch(() => {}));
@@ -33,6 +35,6 @@ self.addEventListener('fetch', e => {
         caches.open(CACHE).then(c => c.put(e.request, copy));
       }
       return res;
-    }).catch(() => caches.match('/index.html')))
+    }).catch(() => caches.match(BASE + 'index.html')))
   );
 });

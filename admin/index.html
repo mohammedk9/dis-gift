@@ -11,13 +11,14 @@
 </head>
 <body>
 <header class="nav"><div class="container nav-inner">
-  <a class="brand" href="/index.html"><span class="brand-mark">🎁</span>
+  <a class="brand" href="../index.html"><span class="brand-mark">🎁</span>
     <span><span class="brand-name">هدية</span><br><span class="brand-sub">الإدارة</span></span></a>
   <span class="nav-spacer"></span>
   <button class="btn btn-ghost btn-sm" id="logout">خروج</button>
 </div></header>
 <div id="tabs"></div>
 <main class="container" id="app" style="padding-bottom:40px"></main>
+<script src="../assets/js/runtime-config.js"></script>
 <script src="../assets/js/vendor/supabase.js"></script>
 <script type="module">
 import { sb, sar, pct } from '../assets/js/core.js';
@@ -26,13 +27,13 @@ import { $, esc, requireConfig, guardAdmin } from '../assets/js/ui.js';
 if (!requireConfig()) throw new Error('not configured');
 if (!await guardAdmin()) throw new Error('unauthorized');
 
-$('#logout').onclick = async () => { await sb.auth.signOut(); location.href = '/login.html'; };
+$('#logout').onclick = async () => { await sb.auth.signOut(); location.href = '../login.html'; };
 
 $('#tabs').innerHTML = `<div class="container"><div class="tabs">
-  ${[['d','المؤشرات','/admin/'],['r','المطاعم','/admin/restaurants.html'],
-     ['o','الطلبات','/admin/orders.html'],['f','العروض','/admin/offers.html'],
-     ['l','دفتر الحسابات','/admin/ledger.html'],['s','كشوف الحساب','/admin/statements.html'],
-     ['g','الإعدادات','/admin/settings.html']].map(([k,l,h]) =>
+  ${[['d','المؤشرات','./'],['r','المطاعم','./restaurants.html'],
+     ['o','الطلبات','./orders.html'],['f','العروض','./offers.html'],
+     ['l','دفتر الحسابات','./ledger.html'],['s','كشوف الحساب','./statements.html'],
+     ['g','الإعدادات','./settings.html']].map(([k,l,h]) =>
     `<a class="tab ${k==='d'?'active':''}" href="${h}">${l}</a>`).join('')}
 </div></div>`;
 

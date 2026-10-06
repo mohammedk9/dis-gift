@@ -1,7 +1,7 @@
 /* ============================================================
    ui.js — toast, modal, nav, guards
    ============================================================ */
-import { sb, isConfigured } from './core.js';
+import { sb, isConfigured, appUrl } from './core.js';
 
 export const $  = (s, r = document) => r.querySelector(s);
 export const $$ = (s, r = document) => Array.from(r.querySelectorAll(s));
@@ -83,19 +83,19 @@ export async function currentSession() {
   return data.session;
 }
 
-/** يحمي صفحات المطعم: يتطلب جلسة + دور مطعم أو أدمن */
-export async function guardStaff({ allowAdmin = true } = {}) {
+/** يحمي صفحات المنشأة: يتطلب جلسة + دور منشأة وربطاً بمنشأة */
+export async function guardStaff({ allowAdmin = false } = {}) {
   const s = await currentSession();
-  if (!s) { location.replace('/login.html?next=' + encodeURIComponent(location.pathname)); return null; }
+  if (!s) { location.replace(appUrl('login.html') + '?next=' + encodeURIComponent(location.pathname + location.search)); return null; }
   const { data: prof } = await sb.from('profiles').select('role').eq('id', s.user.id).maybeSingle();
   let role = prof?.role;
-  if (role === 'admin' || (allowAdmin && await isAdminUser(s.user.id))) {
+  if (allowAdmin && (role === 'admin' || await isAdminUser(s.user.id))) {
     return { session: s, role: 'admin' };
   }
-  if (role !== 'restaurant') { location.replace('/login.html?err=not_restaurant'); return null; }
+  if (role !== 'restaurant') { location.replace(appUrl('login.html') + '?err=not_restaurant'); return null; }
   const { data: staff } = await sb.from('restaurant_staff')
     .select('restaurant_id, role').eq('user_id', s.user.id).limit(1).maybeSingle();
-  if (!staff) { location.replace('/login.html?err=no_restaurant'); return null; }
+  if (!staff) { location.replace(appUrl('login.html') + '?err=no_restaurant'); return null; }
   return { session: s, role: 'restaurant', restaurantId: staff.restaurant_id };
 }
 
@@ -106,18 +106,18 @@ async function isAdminUser(uid) {
 
 export async function guardAdmin() {
   const s = await currentSession();
-  if (!s) { location.replace('/login.html?next=' + encodeURIComponent(location.pathname)); return null; }
-  if (!(await isAdminUser(s.user.id))) { location.replace('/r/'); return null; }
+  if (!s) { location.replace(appUrl('login.html') + '?next=' + encodeURIComponent(location.pathname + location.search)); return null; }
+  if (!(await isAdminUser(s.user.id))) { location.replace(appUrl('r/')); return null; }
   return { session: s, role: 'admin' };
 }
 
 /* ---------- chrome ---------- */
 export function customerNav(active = 'gift') {
   const items = [
-    ['gift',   '🎁', 'الهدية',  '/gift.html'],
-    ['orders', '📋', 'طلباتي',  '/orders.html'],
-    ['notif',  '🔔', 'التنبيهات','/notices.html'],
-    ['more',   '⋯', 'المزيد',   '/account.html'],
+    ['gift',   '🎁', 'الهدية',  appUrl('gift.html')],
+    ['orders', '📋', 'طلباتي',  appUrl('orders.html')],
+    ['notif',  '🔔', 'التنبيهات', appUrl('notices.html')],
+    ['more',   '⋯', 'المزيد',   appUrl('account.html')],
   ];
   return `<nav class="bnav">${items.map(([k, ico, lbl, href]) =>
     `<a href="${href}" class="${active === k ? 'active' : ''}">
@@ -132,9 +132,9 @@ export function staffNav(active, links) {
 /* ---------- PWA: install + service worker ---------- */
 export function initPWA() {
   if ('serviceWorker' in navigator && location.protocol === 'https:') {
-    navigator.serviceWorker.register('/sw.js').catch(() => {});
+    navigator.serviceWorker.register(appUrl('sw.js')).catch(() => {});
   } else if ('serviceWorker' in navigator && location.hostname === 'localhost') {
-    navigator.serviceWorker.register('/sw.js').catch(() => {});
+    navigator.serviceWorker.register(appUrl('sw.js')).catch(() => {});
   }
 
   let deferred = null;
@@ -163,7 +163,7 @@ export function initPWA() {
   });
 }
 
-export function header(title, back = '/') {
+export function header(title, back = appUrl('')) {
   return `<header class="nav"><div class="container nav-inner">
     <a class="brand" href="${back}">
       <span class="brand-mark">🎁</span>

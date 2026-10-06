@@ -4,13 +4,33 @@
    ============================================================ */
 const { createClient } = window.supabase;
 
+const runtime = window.__HADIYA_CONFIG__ || {};
+const PLACEHOLDER_URL = 'https://YOUR-PROJECT.supabase.co';
+const PLACEHOLDER_KEY = 'YOUR-ANON-KEY';
+const validUrl = value => {
+  try {
+    const url = new URL(value);
+    return (url.protocol === 'https:' || url.protocol === 'http:') && !!url.hostname;
+  } catch { return false; }
+};
+const validKey = value => typeof value === 'string' && value.length > 20 &&
+  !value.includes('YOUR-ANON-KEY');
+const storedUrl = localStorage.getItem('hg_url')?.trim();
+const storedKey = localStorage.getItem('hg_key')?.trim();
+
 export const CFG = {
-  url:  localStorage.getItem('hg_url')  || 'https://YOUR-PROJECT.supabase.co',
-  anon: localStorage.getItem('hg_key') || 'YOUR-ANON-KEY',
+  url:  validUrl(storedUrl) ? storedUrl : (validUrl(runtime.supabaseUrl) ? runtime.supabaseUrl : PLACEHOLDER_URL),
+  anon: validKey(storedKey) ? storedKey : (validKey(runtime.supabaseAnonKey) ? runtime.supabaseAnonKey : PLACEHOLDER_KEY),
 };
 
 export const isConfigured = () =>
-  !CFG.url.includes('YOUR-PROJECT') && !CFG.anon.includes('YOUR-ANON-KEY');
+  validUrl(CFG.url) && validKey(CFG.anon);
+
+/* Works both at the domain root and under a GitHub Pages project path. */
+export const APP_ROOT = new URL('../../', import.meta.url);
+export function appUrl(path = '') {
+  return new URL(String(path).replace(/^\/+/, ''), APP_ROOT).pathname;
+}
 
 export const sb = createClient(CFG.url, CFG.anon, {
   auth: { persistSession: true, autoRefreshToken: true, flowType: 'pkce' }

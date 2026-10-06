@@ -11,26 +11,27 @@
 </head>
 <body>
 <header class="nav"><div class="container nav-inner">
-  <a class="brand" href="/r/"><span class="brand-mark">🎁</span>
+  <a class="brand" href="./"><span class="brand-mark">🎁</span>
     <span><span class="brand-name">هدية</span><br><span class="brand-sub">العروض</span></span></a>
   <span class="nav-spacer"></span>
   <button class="btn btn-primary btn-sm" id="addOffer">+ عرض جديد</button>
 </div></header>
 <div id="tabs"></div>
 <main class="container" id="app" style="padding-bottom:40px"></main>
+<script src="../assets/js/runtime-config.js"></script>
 <script src="../assets/js/vendor/supabase.js"></script>
 <script type="module">
 import { sb, dt } from '../assets/js/core.js';
 import { $, esc, toast, modal, requireConfig, guardStaff } from '../assets/js/ui.js';
 
 if (!requireConfig()) throw new Error('not configured');
-const auth = await guardStaff();
+const auth = await guardStaff({ allowAdmin: false });
 if (!auth) throw new Error('unauthorized');
 
 $('#tabs').innerHTML = `<div class="container"><div class="tabs">
-  ${[['d','اللوحة','/r/'],['o','الطلبات','/r/orders.html'],['m','المنيو','/r/menu.html'],
-     ['f','العروض','/r/offers.html'],['s','كشف الحساب','/r/statement.html'],
-     ['p','الملف','/r/profile.html']].map(([k,l,h]) =>
+  ${[['d','اللوحة','./'],['o','الطلبات','./orders.html'],['m','المنيو','./menu.html'],
+     ['f','العروض','./offers.html'],['s','كشف الحساب','./statement.html'],
+     ['p','الملف','./profile.html']].map(([k,l,h]) =>
     `<a class="tab ${k==='f'?'active':''}" href="${h}">${l}</a>`).join('')}
 </div></div>`;
 
@@ -215,9 +216,6 @@ function parseHours(s) {
     return { start: (a || '').trim(), end: (b || '').trim() };
   }).filter(w => w.start && w.end);
 }
-</script>
-</body>
-</html>
 
 $('#app').querySelectorAll('[data-toggle]').forEach(b => b.onclick = async () => {
   await sb.from('offers').update({ is_enabled: b.dataset.v !== 'true' }).eq('id', b.dataset.toggle);
@@ -227,3 +225,6 @@ $('#app').querySelectorAll('[data-edit]').forEach(b => b.onclick = () =>
   edit((offers || []).find(o => o.id === b.dataset.edit)));
 
 $('#addOffer').onclick = () => edit(null);
+</script>
+</body>
+</html>

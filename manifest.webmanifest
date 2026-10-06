@@ -4,9 +4,9 @@
   "description": "هدية يومية من منشأة قريبة منك في بريدة. اكتشف، اطلب مباشرة.",
   "lang": "ar",
   "dir": "rtl",
-  "id": "/",
-  "start_url": "/gift.html",
-  "scope": "/",
+  "id": "./",
+  "start_url": "gift.html",
+  "scope": "./",
   "display": "standalone",
   "orientation": "portrait",
   "background_color": "#fbf7f0",
@@ -19,7 +19,7 @@
     { "src": "assets/icon.svg",   "sizes": "any",     "type": "image/svg+xml", "purpose": "any" }
   ],
   "shortcuts": [
-    { "name": "🎁 هدية اليوم", "url": "/gift.html" },
-    { "name": "📋 طلباتي", "url": "/orders.html" }
+    { "name": "🎁 هدية اليوم", "url": "gift.html" },
+    { "name": "📋 طلباتي", "url": "orders.html" }
   ]
 }

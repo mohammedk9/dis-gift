@@ -11,7 +11,7 @@
 </head>
 <body>
 <header class="nav"><div class="container nav-inner">
-  <a class="brand" href="/index.html">
+  <a class="brand" href="../index.html">
     <span class="brand-mark">🎁</span>
     <span><span class="brand-name">هدية</span><br><span class="brand-sub">لوحة المنشأة</span></span>
   </a>
@@ -21,21 +21,22 @@
 </div></header>
 <div id="tabs"></div>
 <main class="container" id="app" style="padding-bottom:40px"></main>
+<script src="../assets/js/runtime-config.js"></script>
 <script src="../assets/js/vendor/supabase.js"></script>
 <script type="module">
 import { sb, sar, RSTATUS_AR } from '../assets/js/core.js';
 import { $, esc, toast, requireConfig, guardStaff } from '../assets/js/ui.js';
 
 if (!requireConfig()) throw new Error('not configured');
-const auth = await guardStaff();
+const auth = await guardStaff({ allowAdmin: false });
 if (!auth) throw new Error('unauthorized');
 
-$('#logout').onclick = async () => { await sb.auth.signOut(); location.href = '/login.html'; };
+$('#logout').onclick = async () => { await sb.auth.signOut(); location.href = '../login.html'; };
 
 $('#tabs').innerHTML = `<div class="container"><div class="tabs">
-  ${[['d','اللوحة','/r/'],['o','الطلبات','/r/orders.html'],['m','المنيو','/r/menu.html'],
-     ['f','العروض','/r/offers.html'],['s','كشف الحساب','/r/statement.html'],
-     ['p','الملف','/r/profile.html']].map(([k,l,h]) =>
+  ${[['d','اللوحة','./'],['o','الطلبات','./orders.html'],['m','المنيو','./menu.html'],
+     ['f','العروض','./offers.html'],['s','كشف الحساب','./statement.html'],
+     ['p','الملف','./profile.html']].map(([k,l,h]) =>
     `<a class="tab ${k==='d'?'active':''}" href="${h}">${l}</a>`).join('')}
 </div></div>`;
 
@@ -99,7 +100,7 @@ $('#app').innerHTML = `
     <div class="between"><span>رسوم منصة مستحقة (غير مسددة)</span>
       <span style="font-weight:700;color:var(--orange-deep)">${sar(d.fees_due)}</span></div>
     <p class="hint">الرسوم تُحتسب على الطلب المكتمل فقط — لا رسوم على التسجيل أو الإضافة أو الإلغاء.</p>
-    <a class="btn btn-ghost btn-block mt" href="/r/statement.html">عرض كشف الحساب</a>
+    <a class="btn btn-ghost btn-block mt" href="statement.html">عرض كشف الحساب</a>
   </div>
 
   <div class="card mt">

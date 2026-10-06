@@ -309,9 +309,9 @@
         لا اشتراك، ولا رسوم إلا على الطلب المكتمل.
       </p>
 
-      <!-- ASSUMPTION: الرقم 312 بيانات عرض توضيحية داخل النموذج الأولي، وليس إحصاءً لسوق بريدة. -->
-      <span class="mini-pill"><b>312</b> هدية تم فتحها اليوم
-        <span class="badge" style="background:#fff3ea;color:#a35a2a">بيانات تجريبية</span></span>
+      <span class="mini-pill" id="visitorMetric" hidden>
+        <b id="visitorCount"></b> زائر فريد
+      </span>
     </div>
 
     <!-- بطاقة الهدية (يسار) -->
@@ -324,7 +324,7 @@
             <path d="M7.5 8a2.5 2.5 0 0 1 0-5C11 3 12 8 12 8s1-5 4.5-5a2.5 2.5 0 0 1 0 5"/>
           </svg>
         </span>
-        <span class="gc-num">هدية رقم 01</span>
+        <span class="gc-num">هدية اليوم</span>
       </div>
 
       <div class="gc-box">
@@ -414,18 +414,18 @@
       <h2 class="rest-title">هل تملك منشأة؟</h2>
     </div>
     <div class="rest-actions">
-      <a class="btn btn-outline" href="login.html?next=/r/">
+      <a class="btn btn-outline" href="login.html?next=r/">
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
           <path d="m12 19-7-7 7-7"/><path d="M19 12H5"/>
         </svg>
         لوحة المنشأة
       </a>
-      <a class="btn btn-dark" href="login.html?next=/admin/">
+      <a class="btn btn-dark" href="login.html?join=1">
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
           <rect width="7" height="7" x="3" y="3" rx="1"/><rect width="7" height="7" x="14" y="3" rx="1"/>
           <rect width="7" height="7" x="14" y="14" rx="1"/><rect width="7" height="7" x="3" y="14" rx="1"/>
         </svg>
-        لوحة الإدارة
+        سجّل منشأتك
       </a>
     </div>
   </div>
@@ -436,6 +436,30 @@
   const toggle = document.getElementById('navToggle');
   const links  = document.getElementById('navLinks');
   toggle?.addEventListener('click', () => links.classList.toggle('open'));
+</script>
+<script src="assets/js/runtime-config.js"></script>
+<script src="assets/js/vendor/supabase.js"></script>
+<script type="module">
+import { sb, deviceId, isConfigured } from './assets/js/core.js';
+
+async function loadVisitorCount() {
+  if (!isConfigured()) return;
+  const metric = document.querySelector('#visitorMetric');
+  const value = document.querySelector('#visitorCount');
+  try {
+    await sb.rpc('log_event', {
+      p_type: 'page_view', p_device: deviceId(), p_meta: { path: location.pathname }
+    });
+    const { data, error } = await sb.rpc('site_visitor_count');
+    if (error || !Number.isFinite(Number(data))) return;
+    value.textContent = Number(data).toLocaleString('ar-SA');
+    metric.hidden = false;
+  } catch {
+    // لا نعرض عداداً غير مؤكد أو رقماً افتراضياً.
+  }
+}
+
+loadVisitorCount();
 </script>
 </body>
 </html>

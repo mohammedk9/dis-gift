@@ -18,6 +18,7 @@
 </div></header>
 <main class="container page" id="app"></main>
 <div id="nav"></div>
+<script src="assets/js/runtime-config.js"></script>
 <script src="assets/js/vendor/supabase.js"></script>
 <script type="module">
 import { sb, deviceId, sar, dt, STATUS_AR, STATUS_CLASS } from './assets/js/core.js';
@@ -49,10 +50,6 @@ $('#app').innerHTML = `
   : `<div class="empty"><div class="empty-ico">📋</div>
      <p>لا توجد طلبات بعد.</p>
      <a class="btn btn-primary mt" href="gift.html">🎁 افتح هديتك</a></div>`}`;
-</script>
-</body>
-</html>
-
 initPWA();
 </script>
 </body>

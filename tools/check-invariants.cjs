@@ -80,7 +80,7 @@ t('platform_fee defaults to 0 (no invented value)', /'platform_fee', '0'::jsonb/
 t('seed declares its assumptions', /ASSUMPTION/.test(seed));
 
 // ---- structural completeness: catch truncated CREATE TABLE / files ----
-const SRC = ['0001_schema', '0002_rls', '0003_functions', '0004_seed'];
+const SRC = ['0001_schema', '0002_rls', '0003_functions', '0004_seed', '0005_site_visitors', '0006_admin_bootstrap'];
 console.log('\n--- structural completeness ---');
 for (const n of SRC) {
   const raw = fs.readFileSync('supabase/migrations/' + n + '.sql', 'utf8');
