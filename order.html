@@ -8,12 +8,99 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Arabic:wght@300;400;500;600;700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="assets/css/app.css">
+<meta name="theme-color" content="#e86a33">
+<link rel="icon" href="assets/icon.svg" type="image/svg+xml">
+<style>
+  /* ===== الهوية البرتقالية (متوافقة مع بقية الصفحات) ===== */
+  :root{
+    --orange:#e86a33; --orange-deep:#d9531a; --orange-text:#b94110; --orange-light:#f7a05f;
+    --peach:#fdeee3; --peach-2:#fbe0cd; --cream:#fff8f1;
+    --grad:linear-gradient(135deg,#f7a05f 0%,#ee6f33 48%,#d9531a 100%);
+    --shadow-or:0 18px 38px -16px rgba(226,85,31,.55);
+    --card-shadow:0 1px 2px rgba(26,19,14,.04),0 12px 32px -18px rgba(26,19,14,.16);
+  }
+  [hidden]{display:none !important}
+  body{font-family:"IBM Plex Sans Arabic","Cairo","Segoe UI",Tahoma,system-ui,sans-serif;
+       background:linear-gradient(180deg,var(--cream) 0,#fff 360px) no-repeat,#fff}
+
+  header.nav{position:sticky;top:0;z-index:50;background:rgba(255,255,255,.9);
+    backdrop-filter:saturate(180%) blur(14px);-webkit-backdrop-filter:saturate(180%) blur(14px);
+    border-bottom:1px solid #f3e9dd}
+  header.nav::after{content:"";position:absolute;inset-inline:0;bottom:-1px;height:2px;
+    background:linear-gradient(90deg,transparent,var(--orange-light),var(--orange),var(--orange-light),transparent);opacity:.55}
+  header.nav .brand{display:flex;align-items:center;gap:12px;text-decoration:none;color:inherit}
+  .brand-mark{width:42px;height:42px;border-radius:14px;background:var(--grad);color:#fff;
+    display:grid;place-items:center;box-shadow:var(--shadow-or);font-size:0;flex:none}
+  .brand-text{display:flex;flex-direction:column}
+  .brand-name{font-size:20px;font-weight:700;line-height:1.1}
+  .brand-sub{font-size:12px;color:#867b71;line-height:1.4}
+  #stBadge{font-weight:700;font-size:13px;padding:7px 14px;border-radius:999px}
+
+  .page-head .page-title{font-weight:700}
+  .page-head .page-sub{color:#6f655c}
+
+  /* البطاقات */
+  .acc-card{margin-top:16px;border-radius:24px;border:1px solid #f1e7da;background:#fff;padding:20px;
+    box-shadow:var(--card-shadow)}
+  .acc-title{display:flex;align-items:center;gap:10px;margin:0 0 14px;font-size:16.5px;font-weight:700}
+  .acc-ico{width:34px;height:34px;border-radius:11px;background:var(--peach);color:var(--orange-deep);
+    display:grid;place-items:center;flex:none;border:1px solid var(--peach-2)}
+  .acc-card .between{padding:5px 0}
+
+  /* متتبّع الحالة */
+  #app .tl-item{position:relative;padding:0 0 18px;padding-inline-start:38px;min-height:34px}
+  #app .tl-item:last-child{padding-bottom:0}
+  #app .tl-item::before{content:"";inset:auto;position:absolute;inset-inline-start:0;top:2px;width:24px;height:24px;
+    border-radius:50%;background:#fff;border:2px solid #e8dccd;box-sizing:border-box;transition:.2s}
+  #app .tl-item::after{content:"";inset:auto;position:absolute;inset-inline-start:11px;top:28px;bottom:-2px;width:2px;
+    border-radius:2px;background:#eadfd1;height:auto}
+  #app .tl-item:last-child::after{display:none}
+  #app .tl-item.done::before{background:var(--grad);border-color:transparent;
+    background-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='white' stroke-width='3.4' stroke-linecap='round' stroke-linejoin='round'><path d='m6 12.5 4 4 8-9'/></svg>"),var(--grad);
+    background-size:14px 14px,100% 100%;background-position:center;background-repeat:no-repeat}
+  #app .tl-item.done:not(.now)::after{background:var(--orange-light)}
+  #app .tl-item.now::before{box-shadow:0 0 0 5px rgba(232,106,51,.2)}
+  #app .tl-t{font-weight:600;font-size:15px;line-height:1.7;color:#9a8f85}
+  #app .tl-item.done .tl-t{color:var(--ink,#1a130e)}
+  #app .tl-item.now .tl-t{color:var(--orange-text)}
+  #app .tl-d{font-size:12.5px;color:#6f655c;line-height:1.7}
+  #app .tl-item.now .tl-d{color:var(--orange-text);font-weight:600}
+
+  .total-row{background:var(--cream);border:1px solid var(--peach-2);border-radius:14px;padding:12px 14px !important;
+    color:var(--orange-text);font-size:16px}
+  .pay-note{display:flex;gap:10px;align-items:flex-start;margin-top:14px;padding:12px 14px;border-radius:14px;
+    background:var(--peach);border:1px solid var(--peach-2);color:var(--orange-text);font-size:13.5px;line-height:1.8}
+  .pay-note svg{flex:none;margin-top:3px}
+  .call-btn{display:flex;align-items:center;justify-content:center;gap:9px;margin-top:14px;padding:13px;
+    border-radius:15px;background:var(--grad);color:#fff;text-decoration:none;font-weight:700;font-size:15px;
+    box-shadow:var(--shadow-or);transition:.2s}
+  .call-btn:hover{transform:translateY(-2px)}
+
+  .state-card{margin-top:14px;border-radius:26px;border:1px solid #f1e7da;background:#fff;padding:34px 22px;
+    text-align:center;box-shadow:var(--card-shadow)}
+  .state-ico{width:68px;height:68px;margin:0 auto 12px;border-radius:22px;background:var(--peach);
+    color:var(--orange-deep);display:grid;place-items:center;border:1px solid var(--peach-2)}
+  .state-card p{color:#6f655c;font-size:14.5px;margin:6px 0 0}
+  .state-btn{margin-top:18px;display:inline-flex;align-items:center;gap:8px;text-decoration:none;
+    background:#fff;color:var(--orange-text);border:1px solid var(--peach-2);border-radius:14px;
+    padding:12px 24px;font-size:14.5px;font-weight:600;transition:.2s}
+  .state-btn:hover{background:var(--peach);border-color:var(--orange-light)}
+
+  a:focus-visible,button:focus-visible{outline:2px solid var(--orange);outline-offset:3px;border-radius:10px}
+  @media (prefers-reduced-motion:reduce){*,*::before,*::after{animation:none !important;transition:none !important}}
+</style>
 </head>
 <body>
 <header class="nav"><div class="container nav-inner">
   <a class="brand" href="orders.html">
-    <span class="brand-mark">🎁</span>
-    <span><span class="brand-name">هدية</span><br><span class="brand-sub">حالة الطلب</span></span>
+    <span class="brand-mark" aria-hidden="true">
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+        <rect x="3" y="8" width="18" height="4" rx="1"/><path d="M12 8v13"/>
+        <path d="M19 12v7a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2v-7"/>
+        <path d="M7.5 8a2.5 2.5 0 0 1 0-5C11 3 12 8 12 8s1-5 4.5-5a2.5 2.5 0 0 1 0 5"/>
+      </svg>
+    </span>
+    <span class="brand-text"><span class="brand-name">هدية</span><span class="brand-sub">حالة الطلب</span></span>
   </a>
   <span class="nav-spacer"></span>
   <span class="badge" id="stBadge">…</span>
@@ -28,6 +115,17 @@ import { $, esc, requireConfig, customerNav, initPWA } from './assets/js/ui.js';
 document.body.insertAdjacentHTML('beforeend', customerNav('orders'));
 if (!requireConfig()) throw new Error('not configured');
 
+/* أيقونات SVG بدل الإيموجي */
+const svg = (inner, s = 20, sw = 1.8) =>
+  `<svg width="${s}" height="${s}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="${sw}" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${inner}</svg>`;
+const ICON = {
+  search: (s, sw) => svg(`<circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/>`, s, sw),
+  list:   (s, sw) => svg(`<path d="M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01"/>`, s, sw),
+  clock:  (s, sw) => svg(`<circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/>`, s, sw),
+  phone:  (s, sw) => svg(`<path d="M22 16.9v3a2 2 0 0 1-2.2 2 19.8 19.8 0 0 1-8.6-3.1 19.5 19.5 0 0 1-6-6A19.8 19.8 0 0 1 2.1 4.2 2 2 0 0 1 4.1 2h3a2 2 0 0 1 2 1.7c.1 1 .4 1.9.7 2.8a2 2 0 0 1-.5 2.1L8.1 9.9a16 16 0 0 0 6 6l1.3-1.3a2 2 0 0 1 2.1-.4c.9.3 1.8.6 2.8.7a2 2 0 0 1 1.7 2z"/>`, s, sw),
+  cash:   (s, sw) => svg(`<rect x="2" y="6" width="20" height="12" rx="2"/><circle cx="12" cy="12" r="2.5"/><path d="M6 12h.01M18 12h.01"/>`, s, sw)
+};
+
 const code = new URLSearchParams(location.search).get('code');
 const STEPS = [['new','تم الإرسال'], ['accepted','قبل المنشأة'], ['preparing','قيد التجهيز'],
                ['ready','جاهز'], ['completed','مكتمل']];
@@ -36,9 +134,9 @@ async function load() {
   if (!code) { location.replace('orders.html'); return; }
   const { data } = await sb.rpc('customer_order', { p_device: deviceId(), p_code: code });
   if (!data?.ok) {
-    $('#app').innerHTML = `<div class="empty"><div class="empty-ico">🔍</div>
+    $('#app').innerHTML = `<div class="state-card"><div class="state-ico">${ICON.search(32, 1.6)}</div>
       <p>لم نعثر على هذا الطلب.</p>
-      <a class="btn btn-ghost mt" href="orders.html">طلباتي</a></div>`;
+      <a class="state-btn" href="orders.html">طلباتي</a></div>`;
     return;
   }
   const o = data.order, r = data.restaurant;
@@ -55,14 +153,14 @@ async function load() {
     </div>
 
     ${dead ? `<div class="alert alert-error">هذا الطلب ${STATUS_AR[o.status]} — لا توجد رسوم منصة عليه.</div>`
-      : `<div class="card">
-        ${STEPS.map((s, i) => `<div class="tl-item ${i <= idx ? 'done' : ''}">
+      : `<div class="acc-card">
+        ${STEPS.map((s, i) => `<div class="tl-item ${i <= idx ? 'done' : ''} ${i === idx ? 'now' : ''}">
           <div class="tl-t">${s[1]}</div>
           <div class="tl-d">${i === idx ? 'الحالة الآن' : ''}</div>
         </div>`).join('')}
       </div>`}
 
-    <div class="card mt">
+    <div class="acc-card">
       <div class="between"><span>المنشأة</span><span style="font-weight:600">${esc(r.name)}</span></div>
       <div class="between small muted"><span>طريقة الاستلام</span>
         <span>${o.order_type === 'pickup' ? 'استلام من المنشأة' : 'توصيل المنشأة'}</span></div>
@@ -70,26 +168,26 @@ async function load() {
         <span dir="ltr">${esc(o.pickup_slot)}</span></div>` : ''}
       ${o.address ? `<div class="between small muted"><span>العنوان</span>
         <span>${esc(o.address)}</span></div>` : ''}
-      ${r.phone ? `<a class="btn btn-ghost btn-block mt" href="tel:${esc(r.phone)}"
-        >📞 اتصال بالمنشأة</a>` : ''}
+      ${r.phone ? `<a class="call-btn" href="tel:${esc(r.phone)}"
+        >${ICON.phone(18, 2)} اتصال بالمنشأة</a>` : ''}
     </div>
 
-    <div class="card mt">
-      <h3 class="section-title" style="margin-top:0;font-size:15px">الأصناف</h3>
+    <div class="acc-card">
+      <h3 class="acc-title"><span class="acc-ico">${ICON.list(18)}</span> الأصناف</h3>
       ${o.items.map(i => `<div class="between small" style="padding:6px 0">
         <span>${esc(i.name)} × ${i.qty}</span><span>${sar(i.line_total)}</span></div>`).join('')}
       <div style="height:1px;background:var(--line);margin:10px 0"></div>
       <div class="between small muted"><span>الإجمالي</span><span>${sar(o.subtotal)}</span></div>
       <div class="between small" style="color:var(--orange-deep)">
         <span>الخصم</span><span>− ${sar(o.discount)}</span></div>
-      <div class="between" style="font-weight:700;margin-top:8px">
+      <div class="between total-row" style="font-weight:700;margin-top:8px">
         <span>المطلوب دفعه للمطعم</span><span>${sar(o.total)}</span></div>
-      <div class="alert alert-info mt mb">💵 ${esc(o.payment_note)}</div>
+      <div class="pay-note">${ICON.cash(19)}<span>${esc(o.payment_note)}</span></div>
       ${o.note ? `<p class="small muted">ملاحظتك: ${esc(o.note)}</p>` : ''}
     </div>
 
-    ${data.timeline.length ? `<div class="card mt">
-      <h3 class="section-title" style="margin-top:0;font-size:15px">سجل الطلب</h3>
+    ${data.timeline.length ? `<div class="acc-card">
+      <h3 class="acc-title"><span class="acc-ico">${ICON.clock(18)}</span> سجل الطلب</h3>
       <div class="timeline">
         ${data.timeline.map(t => `<div class="tl-item done">
           <div class="tl-t">${STATUS_AR[t.status] || t.status}</div>
