@@ -85,6 +85,23 @@
     width:42px;height:42px;border-radius:50%;border:0;cursor:pointer;
     background:var(--ink);color:#fff;font:inherit;font-weight:600;font-size:16px;
   }
+  .account-control{position:relative}
+  .avatar[aria-expanded="true"]{box-shadow:0 0 0 3px var(--peach-2)}
+  .account-menu{
+    position:absolute;inset-inline-end:0;top:calc(100% + 12px);z-index:80;
+    width:min(238px,calc(100vw - 32px));padding:8px;
+    background:#fff;border:1px solid #eee7de;border-radius:16px;
+    box-shadow:0 18px 42px -20px rgba(22,18,15,.38);
+  }
+  .account-menu[hidden]{display:none}
+  .account-menu-title{color:var(--muted);font-size:12px;font-weight:600;margin:4px 10px 6px}
+  .account-menu a{
+    display:flex;align-items:center;gap:10px;color:var(--ink-soft);text-decoration:none;
+    font-size:13.5px;font-weight:500;padding:10px;border-radius:10px;transition:.18s;
+  }
+  .account-menu a:hover,.account-menu a:focus-visible{background:#f8f4ee;color:var(--ink)}
+  .account-menu-icon{width:18px;height:18px;display:grid;place-items:center;color:var(--orange);flex:none}
+  .account-menu-divider{height:1px;background:var(--line);display:block;margin:6px 4px}
   .nav-toggle{display:none;background:none;border:0;cursor:pointer;color:var(--ink);padding:6px}
 
   /* ============ HERO ============ */
@@ -277,8 +294,46 @@
         </svg>
       </button>
 
-      <button class="avatar" type="button" aria-label="حسابي"
-              onclick="location.href='account.html'">س</button>
+      <div class="account-control">
+        <button class="avatar" id="accountToggle" type="button" aria-label="خيارات الحساب"
+                aria-haspopup="menu" aria-expanded="false" aria-controls="accountMenu">س</button>
+        <div class="account-menu" id="accountMenu" role="menu" aria-label="خيارات الحساب" hidden>
+          <p class="account-menu-title">خيارات الحساب</p>
+          <a role="menuitem" href="login.html?signup=1&mode=customer">
+            <span class="account-menu-icon" aria-hidden="true">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M19 8v6M22 11h-6"/>
+              </svg>
+            </span>
+            التسجيل كعميل
+          </a>
+          <a role="menuitem" href="login.html?join=1">
+            <span class="account-menu-icon" aria-hidden="true">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M3 21h18M5 21V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2v16M9 7h1M14 7h1M9 11h1M14 11h1M9 15h1M14 15h1"/>
+              </svg>
+            </span>
+            التسجيل كمنشأة
+          </a>
+          <span class="account-menu-divider" aria-hidden="true"></span>
+          <a role="menuitem" href="login.html">
+            <span class="account-menu-icon" aria-hidden="true">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4M10 17l5-5-5-5M15 12H3"/>
+              </svg>
+            </span>
+            تسجيل الدخول
+          </a>
+          <a role="menuitem" href="account.html">
+            <span class="account-menu-icon" aria-hidden="true">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                <circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/>
+              </svg>
+            </span>
+            حسابي
+          </a>
+        </div>
+      </div>
 
       <button class="nav-toggle" id="navToggle" type="button" aria-label="القائمة">
         <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 7h16M4 12h16M4 17h16"/></svg>
@@ -406,36 +461,69 @@
   </div>
 </section>
 
-<!-- ================= RESTAURANTS ================= -->
-<section class="restaurants">
-  <div class="container rest-row">
-    <div>
-      <p class="eyebrow">للمنشآت</p>
-      <h2 class="rest-title">هل تملك منشأة؟</h2>
-    </div>
-    <div class="rest-actions">
-      <a class="btn btn-outline" href="login.html?next=r/">
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-          <path d="m12 19-7-7 7-7"/><path d="M19 12H5"/>
-        </svg>
-        لوحة المنشأة
-      </a>
-      <a class="btn btn-dark" href="login.html?join=1">
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-          <rect width="7" height="7" x="3" y="3" rx="1"/><rect width="7" height="7" x="14" y="3" rx="1"/>
-          <rect width="7" height="7" x="14" y="14" rx="1"/><rect width="7" height="7" x="3" y="14" rx="1"/>
-        </svg>
-        سجّل منشأتك
-      </a>
-    </div>
-  </div>
-</section>
-
 <script>
   // قائمة الجوال فقط — لا يؤثر على المظهر على الشاشات الكبيرة
   const toggle = document.getElementById('navToggle');
   const links  = document.getElementById('navLinks');
   toggle?.addEventListener('click', () => links.classList.toggle('open'));
+
+  // قائمة الحساب: التسجيل مخفي من الصفحة الرئيسية ويظهر عند طلبه من الأيقونة.
+  const accountToggle = document.getElementById('accountToggle');
+  const accountMenu = document.getElementById('accountMenu');
+  const accountItems = () => [...accountMenu.querySelectorAll('[role="menuitem"]')];
+
+  function closeAccountMenu(restoreFocus = false) {
+    if (accountMenu.hidden) return;
+    accountMenu.hidden = true;
+    accountToggle.setAttribute('aria-expanded', 'false');
+    if (restoreFocus) accountToggle.focus();
+  }
+
+  function openAccountMenu(focusFirst = false) {
+    accountMenu.hidden = false;
+    accountToggle.setAttribute('aria-expanded', 'true');
+    if (focusFirst) accountItems()[0]?.focus();
+  }
+
+  accountToggle?.addEventListener('click', () => {
+    if (accountMenu.hidden) openAccountMenu();
+    else closeAccountMenu();
+  });
+
+  accountToggle?.addEventListener('keydown', event => {
+    if (event.key === 'ArrowDown') {
+      event.preventDefault();
+      openAccountMenu(true);
+    }
+  });
+
+  accountMenu?.addEventListener('keydown', event => {
+    const items = accountItems();
+    const index = items.indexOf(document.activeElement);
+    if (event.key === 'Escape') {
+      event.preventDefault();
+      closeAccountMenu(true);
+    } else if (event.key === 'ArrowDown' || event.key === 'ArrowUp') {
+      event.preventDefault();
+      const next = event.key === 'ArrowDown'
+        ? (index + 1) % items.length
+        : (index - 1 + items.length) % items.length;
+      items[next]?.focus();
+    } else if (event.key === 'Home') {
+      event.preventDefault();
+      items[0]?.focus();
+    } else if (event.key === 'End') {
+      event.preventDefault();
+      items.at(-1)?.focus();
+    }
+  });
+
+  document.addEventListener('pointerdown', event => {
+    if (!accountMenu.hidden && !event.target.closest('.account-control')) closeAccountMenu();
+  });
+  document.addEventListener('keydown', event => {
+    if (event.key === 'Escape' && !accountMenu.hidden) closeAccountMenu(true);
+  });
 </script>
 <script src="assets/js/runtime-config.js"></script>
 <script src="assets/js/vendor/supabase.js"></script>

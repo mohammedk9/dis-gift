@@ -37,6 +37,7 @@ if (requestedNext) {
     next = candidate.pathname + candidate.search + candidate.hash;
 }
 const join = params.get('join') === '1';
+const signup = params.get('signup') === '1';
 let mode = params.get('mode') === 'business' || join || /\/r\//.test(next) || /\/admin\//.test(next)
   ? 'business' : 'customer';
 const err  = params.get('err');
@@ -314,6 +315,7 @@ $('#signupR').onclick = async () => {
 };
 
 if (join) document.querySelector('#signupR')?.click();
+else if (signup) document.querySelector('#signupCustomer')?.click();
 </script>
 </body>
 </html>
