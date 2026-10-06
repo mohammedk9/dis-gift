@@ -8,5 +8,6 @@
  */
 window.__HADIYA_CONFIG__ = Object.freeze({
   supabaseUrl: '',
-  supabaseAnonKey: ''
+  supabaseAnonKey: '',
+  configSource: 'source-placeholder'
 });

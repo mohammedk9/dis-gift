@@ -6,7 +6,7 @@ on:
   workflow_dispatch:
 
 permissions:
-  contents: read
+  contents: write
   pages: write
   id-token: write
 
@@ -47,17 +47,40 @@ jobs:
             console.error('Set SUPABASE_URL and SUPABASE_ANON_KEY as repository/environment secrets or variables.');
             process.exit(1);
           }
-          const config = { supabaseUrl: url, supabaseAnonKey: key };
-          fs.writeFileSync(
-            'assets/js/runtime-config-live.js',
-            'window.__HADIYA_CONFIG__ = Object.freeze(' + JSON.stringify(config) + ');\n',
+          const output = 'assets/js/runtime-config-live.js';
+          const config = { supabaseUrl: url, supabaseAnonKey: key, configSource: 'github-actions' };
+          const source = 'window.__HADIYA_CONFIG__ = Object.freeze(' + JSON.stringify(config) + ');\n';
+          fs.writeFileSync(output, source,
             'utf8'
           );
+          const generated = fs.readFileSync(output, 'utf8');
+          if (!generated.includes(url) || !generated.includes(key) ||
+              !generated.includes('configSource:') && !generated.includes('"configSource":"github-actions"')) {
+            console.error('Generated runtime config does not contain the validated deployment values.');
+            process.exit(1);
+          }
           console.log('Supabase runtime config generated:', {
             url: parsed.origin,
-            anonKeyLength: key.length
+            anonKeyLength: key.length,
+            output
           });
           NODE
+
+      # Some repositories still have Pages configured as "Deploy from a
+      # branch". Keep the public browser config in that branch too, so that
+      # branch-based Pages cannot silently publish the placeholder file.
+      - name: Sync public config for branch-based Pages
+        run: |
+          set -euo pipefail
+          if git diff --quiet -- assets/js/runtime-config-live.js; then
+            echo "Public runtime config is already current."
+            exit 0
+          fi
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add assets/js/runtime-config-live.js
+          git commit -m 'chore: sync public Supabase runtime config [skip ci]'
+          git push origin "HEAD:${GITHUB_REF_NAME}"
 
       - name: Upload Pages artifact
         uses: actions/upload-pages-artifact@v3
