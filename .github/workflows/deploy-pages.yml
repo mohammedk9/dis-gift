@@ -49,10 +49,14 @@ jobs:
           }
           const config = { supabaseUrl: url, supabaseAnonKey: key };
           fs.writeFileSync(
-            'assets/js/runtime-config.js',
+            'assets/js/runtime-config-live.js',
             'window.__HADIYA_CONFIG__ = Object.freeze(' + JSON.stringify(config) + ');\n',
             'utf8'
           );
+          console.log('Supabase runtime config generated:', {
+            url: parsed.origin,
+            anonKeyLength: key.length
+          });
           NODE
 
       - name: Upload Pages artifact

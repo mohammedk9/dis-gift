@@ -29,7 +29,7 @@ self.addEventListener('fetch', e => {
   if (url.hostname.includes('supabase') || url.origin !== location.origin) return;
   // Runtime configuration is generated during deployment and must never be
   // served from a stale offline cache.
-  if (url.pathname.endsWith('/assets/js/runtime-config.js')) return;
+  if (url.pathname.endsWith('/assets/js/runtime-config-live.js')) return;
 
   e.respondWith(
     caches.match(e.request).then(hit => hit || fetch(e.request).then(res => {

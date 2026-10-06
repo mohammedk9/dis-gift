@@ -39,7 +39,7 @@ npx serve .          # أو أي سيرفر ملفات ثابت
 - `SUPABASE_URL`: رابط مشروعك مثل `https://xxxx.supabase.co`
 - `SUPABASE_ANON_KEY`: المفتاح العام (anon/publishable key) من Project Settings → API
 
-ينشئ workflow ملف `assets/js/runtime-config.js` أثناء النشر. لا تضع `service_role`
+ينشئ workflow ملف `assets/js/runtime-config-live.js` أثناء النشر. لا تضع `service_role`
 key في المستودع أو في الواجهة. الإدخال المحلي محفوظ في المتصفح للتطوير فقط، ولا
 يُطلب من العملاء على الموقع المنشور.
 
