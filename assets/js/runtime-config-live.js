@@ -1,13 +1,1 @@
-/*
- * Public runtime configuration.
- *
- * GitHub Pages cannot read .env files in the browser. The Pages workflow
- * replaces this file with values from GitHub Secrets during deployment.
- * The anon/publishable key is safe to ship to the browser; never put a
- * service_role key in this file.
- */
-window.__HADIYA_CONFIG__ = Object.freeze({
-  supabaseUrl: '',
-  supabaseAnonKey: '',
-  configSource: 'source-placeholder'
-});
+window.__HADIYA_CONFIG__ = Object.freeze({"supabaseUrl":"https://flkwhvvlvgkkbjlraeje.supabase.co","supabaseAnonKey":"eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZsa3dodnZsdmdra2JqbHJhZWplIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTEwNDc3ODQsImV4cCI6MjEwNjYyMzc4NH0.CNX2wmB61etnsazOGGLOV2unsqpDCvE1yrv2GRRGhnE","configSource":"github-actions"});
