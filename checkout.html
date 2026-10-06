@@ -3,207 +3,386 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>إتمام الطلب | هدية</title>
+<title>هدية اليوم | هدية</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Arabic:wght@300;400;500;600;700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="assets/css/app.css">
+<link rel="manifest" href="manifest.webmanifest">
+<meta name="theme-color" content="#e86a33">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="هدية">
+<link rel="icon" href="assets/icon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="assets/icon.svg">
+<style>
+  /* ===== الهوية البرتقالية (متوافقة مع الصفحة الرئيسية) ===== */
+  :root{
+    --orange:#e86a33; --orange-deep:#d9531a; --orange-text:#b94110; --orange-light:#f7a05f;
+    --peach:#fdeee3; --peach-2:#fbe0cd; --cream:#fff8f1;
+    --grad:linear-gradient(135deg,#f7a05f 0%,#ee6f33 48%,#d9531a 100%);
+    --shadow-or:0 18px 38px -16px rgba(226,85,31,.55);
+  }
+  body{font-family:"IBM Plex Sans Arabic","Cairo","Segoe UI",Tahoma,system-ui,sans-serif;
+       background:linear-gradient(180deg,var(--cream) 0,#fff 360px) no-repeat,#fff}
+
+  /* الهيدر */
+  header.nav{position:sticky;top:0;z-index:50;background:rgba(255,255,255,.9);
+    backdrop-filter:saturate(180%) blur(14px);-webkit-backdrop-filter:saturate(180%) blur(14px);
+    border-bottom:1px solid #f3e9dd}
+  header.nav::after{content:"";position:absolute;inset-inline:0;bottom:-1px;height:2px;
+    background:linear-gradient(90deg,transparent,var(--orange-light),var(--orange),var(--orange-light),transparent);opacity:.55}
+  header.nav .brand{display:flex;align-items:center;gap:12px;text-decoration:none;color:inherit}
+  .brand-mark{width:42px;height:42px;border-radius:14px;background:var(--grad);color:#fff;
+    display:grid;place-items:center;box-shadow:var(--shadow-or);font-size:0;flex:none}
+  .brand-text{display:flex;flex-direction:column}
+  .brand-name{font-size:20px;font-weight:700;line-height:1.1}
+  .brand-sub{font-size:12px;color:#867b71;line-height:1.4}
+  #areaBtn{display:inline-flex;align-items:center;gap:7px;background:var(--peach);
+    border:1px solid var(--peach-2);color:var(--orange-text);font-weight:600;border-radius:999px;transition:.2s}
+  #areaBtn:hover{background:var(--peach-2)}
+  #areaBtn svg{color:var(--orange)}
+
+  .eyebrow-pill{display:inline-flex;align-items:center;gap:8px;background:#fff;color:var(--orange-text);
+    border:1px solid var(--peach-2);font-size:13px;font-weight:600;padding:7px 15px;border-radius:999px;
+    box-shadow:0 8px 20px -14px rgba(226,85,31,.6);margin:0}
+  .eyebrow-pill i{width:8px;height:8px;border-radius:50%;background:var(--orange);position:relative;display:block}
+  .eyebrow-pill i::after{content:"";position:absolute;inset:-4px;border-radius:50%;
+    border:2px solid var(--orange);opacity:.5;animation:ping 1.8s ease-out infinite}
+  @keyframes ping{0%{transform:scale(.6);opacity:.7}100%{transform:scale(1.6);opacity:0}}
+
+  /* بطاقة الهدية (مغلقة / مفتوحة) */
+  .gift-hero{position:relative;overflow:hidden;color:#fff;background:var(--grad);border-radius:30px;
+    padding:30px 24px 24px;text-align:center;
+    box-shadow:0 34px 70px -26px rgba(226,96,40,.65),0 0 0 6px rgba(255,255,255,.7)}
+  .gift-hero::before{content:"";position:absolute;width:300px;height:300px;border-radius:50%;
+    border:1px solid rgba(255,255,255,.22);right:-110px;top:-110px;pointer-events:none;
+    box-shadow:0 0 0 40px rgba(255,255,255,.05),0 0 0 80px rgba(255,255,255,.04)}
+  .gift-hero::after{content:"";position:absolute;top:0;bottom:0;width:60%;left:-80%;pointer-events:none;
+    background:linear-gradient(100deg,transparent,rgba(255,255,255,.22),transparent);
+    transform:skewX(-18deg);animation:shine 5.5s ease-in-out infinite}
+  @keyframes shine{0%,55%{left:-80%}100%{left:140%}}
+  .gift-hero > *{position:relative;z-index:1}
+  .gh-box{width:96px;height:96px;margin:0 auto 14px;border-radius:26px;display:grid;place-items:center;
+    background:rgba(255,255,255,.2);border:1px solid rgba(255,255,255,.3);color:#fff;
+    box-shadow:inset 0 1px 0 rgba(255,255,255,.35),0 18px 30px -16px rgba(120,30,0,.5);
+    animation:wiggle 4.5s ease-in-out infinite}
+  @keyframes wiggle{0%,86%,100%{rotate:0deg}90%{rotate:-6deg}94%{rotate:6deg}97%{rotate:-3deg}}
+  .gh-title{font-size:26px;font-weight:700;margin:0;letter-spacing:-.3px}
+  .gh-text{margin:8px auto 0;max-width:330px;color:rgba(255,255,255,.92);font-size:14.5px;line-height:1.9}
+  .gh-line{height:1px;background:rgba(255,255,255,.3);margin:20px 0 18px}
+  .gh-btn{display:inline-flex;align-items:center;justify-content:center;gap:9px;border:0;cursor:pointer;
+    background:#fff;color:var(--orange-text);border-radius:15px;padding:14px 30px;
+    font:inherit;font-size:16px;font-weight:700;box-shadow:0 12px 26px -10px rgba(0,0,0,.4);transition:.2s}
+  .gh-btn:hover{transform:translateY(-2px);box-shadow:0 16px 30px -12px rgba(0,0,0,.45)}
+  .gh-btn:disabled{opacity:.85;cursor:wait;transform:none}
+  .gh-foot{margin:16px 0 0;font-size:12px;color:rgba(255,255,255,.88)}
+
+  /* هدية مكشوفة */
+  .reveal-card{animation:rise .55s cubic-bezier(.2,.9,.3,1.2)}
+  @keyframes rise{from{opacity:0;transform:translateY(14px) scale(.96)}to{opacity:1;transform:none}}
+  .rv-label{margin:0;font-size:14px;color:rgba(255,255,255,.9)}
+  .rv-value{display:flex;align-items:baseline;justify-content:center;gap:6px;margin:6px 0 2px;
+    font-size:68px;font-weight:700;line-height:1.1;letter-spacing:-1px;text-shadow:0 8px 24px rgba(120,30,0,.25)}
+  .rv-value .rv-unit{font-size:26px;font-weight:600;letter-spacing:0}
+  .rv-value svg{display:block}
+  .rv-head{margin:4px 0 0;font-size:16.5px;font-weight:600}
+
+  /* كيف تعمل */
+  .how-card{margin-top:18px;border-radius:24px;border:1px solid #f1e7da;background:#fff;
+    padding:20px;box-shadow:0 1px 2px rgba(26,19,14,.04),0 12px 32px -18px rgba(26,19,14,.16)}
+  .how-head{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:14px}
+  .how-head b{font-size:17px}
+  .how-head small{display:block;color:#6f655c;font-size:12.5px}
+  .pill-orange{background:var(--peach);color:var(--orange-text);border:1px solid var(--peach-2);
+    font-size:12px;font-weight:600;padding:5px 12px;border-radius:999px;white-space:nowrap}
+  .how-list{display:grid;gap:10px}
+  .how-item{display:flex;align-items:center;gap:12px;padding:10px 12px;border-radius:16px;
+    background:var(--cream);transition:.2s}
+  .how-item:hover{background:var(--peach)}
+  .how-ico{width:38px;height:38px;border-radius:12px;background:#fff;color:var(--orange-deep);
+    display:grid;place-items:center;flex:none;border:1px solid var(--peach-2)}
+  .how-txt{flex:1;font-size:14px;color:#3a332e}
+  .how-num{width:26px;height:26px;border-radius:50%;background:var(--grad);color:#fff;
+    font-size:12.5px;font-weight:700;display:grid;place-items:center;flex:none}
+
+  /* بطاقة المنشأة */
+  .shop-card{margin-top:18px;border-radius:24px;border:1px solid #f1e7da;background:#fff;padding:20px;
+    box-shadow:0 1px 2px rgba(26,19,14,.04),0 12px 32px -18px rgba(26,19,14,.16)}
+  .shop-row{display:flex;align-items:center;gap:14px}
+  .shop-logo{width:58px;height:58px;border-radius:16px;object-fit:cover;flex:none}
+  .shop-ph{width:58px;height:58px;border-radius:16px;background:var(--peach);color:var(--orange-deep);
+    display:grid;place-items:center;flex:none;border:1px solid var(--peach-2)}
+  .shop-name{font-weight:700;font-size:17px;line-height:1.4}
+  .shop-addr{font-size:13px;color:#6f655c}
+  .shop-note{font-size:13.5px;color:#6f655c;margin:12px 0 0;line-height:1.9}
+  .chips{display:flex;flex-wrap:wrap;gap:8px;margin-top:14px}
+  .ok-box{display:flex;gap:10px;align-items:flex-start;margin-top:14px;padding:12px 14px;border-radius:14px;
+    background:#eefaf1;border:1px solid #cfeedb;color:#1e6b3a;font-size:13.5px;line-height:1.8}
+  .ok-box svg{flex:none;margin-top:3px}
+  .order-btn{display:flex;align-items:center;justify-content:center;gap:9px;width:100%;margin-top:18px;
+    border:0;cursor:pointer;background:var(--grad);color:#fff;border-radius:16px;padding:16px;
+    font:inherit;font-size:16.5px;font-weight:700;box-shadow:var(--shadow-or);transition:.2s}
+  .order-btn:hover{transform:translateY(-2px);box-shadow:0 22px 40px -16px rgba(226,85,31,.7)}
+  .pay-hint{display:flex;align-items:center;justify-content:center;gap:7px;margin:14px 0 0;
+    font-size:12.5px;color:#6f655c;text-align:center}
+  .pay-hint svg{color:var(--orange);flex:none}
+
+  /* حالات: لا توجد هدية / خطأ */
+  .state-card{margin-top:6px;border-radius:26px;border:1px solid #f1e7da;background:#fff;padding:34px 22px;
+    text-align:center;box-shadow:0 12px 32px -18px rgba(26,19,14,.16)}
+  .state-ico{width:68px;height:68px;margin:0 auto 12px;border-radius:22px;background:var(--peach);
+    color:var(--orange-deep);display:grid;place-items:center;border:1px solid var(--peach-2)}
+  .state-card h2{font-size:18.5px;font-weight:700;margin:6px 0 6px}
+  .state-card p{color:#6f655c;font-size:14px;line-height:1.9;margin:0 auto;max-width:340px}
+  .state-btn{margin-top:18px;display:inline-flex;align-items:center;gap:8px;cursor:pointer;
+    background:#fff;color:var(--orange-text);border:1px solid var(--peach-2);border-radius:14px;
+    padding:12px 24px;font:inherit;font-size:14.5px;font-weight:600;transition:.2s}
+  .state-btn:hover{background:var(--peach);border-color:var(--orange-light)}
+
+  .spin-i{width:16px;height:16px;border-radius:50%;border:2.5px solid var(--peach-2);
+    border-top-color:var(--orange);animation:spin .7s linear infinite;display:inline-block}
+  @keyframes spin{to{transform:rotate(360deg)}}
+
+  a:focus-visible,button:focus-visible{outline:2px solid var(--orange);outline-offset:3px;border-radius:10px}
+  @media (prefers-reduced-motion:reduce){*,*::before,*::after{animation:none !important;transition:none !important}}
+</style>
 </head>
 <body>
 <header class="nav"><div class="container nav-inner">
-  <a class="brand" href="menu.html">
-    <span class="brand-mark">🎁</span>
-    <span><span class="brand-name">هدية</span><br><span class="brand-sub">إتمام الطلب</span></span>
+  <a class="brand" href="index.html">
+    <span class="brand-mark" aria-hidden="true">
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+        <rect x="3" y="8" width="18" height="4" rx="1"/><path d="M12 8v13"/>
+        <path d="M19 12v7a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2v-7"/>
+        <path d="M7.5 8a2.5 2.5 0 0 1 0-5C11 3 12 8 12 8s1-5 4.5-5a2.5 2.5 0 0 1 0 5"/>
+      </svg>
+    </span>
+    <span class="brand-text"><span class="brand-name">هدية</span><span class="brand-sub">اكتشف · اطلب</span></span>
   </a>
   <span class="nav-spacer"></span>
+  <button class="btn btn-ghost btn-sm" id="areaBtn" type="button">
+    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z"/><circle cx="12" cy="10" r="3"/></svg>
+    <span id="areaLabel">كل بريدة</span>
+  </button>
 </div></header>
-<main class="container page" id="app"></main>
+
+<main class="container page" id="app">
+  <div class="page-head center">
+    <p class="eyebrow-pill"><i aria-hidden="true"></i>بريدة — اليوم</p>
+  </div>
+  <div id="stage"></div>
+</main>
+
+<div id="nav"></div>
 <script src="assets/js/runtime-config-live.js"></script>
 <script src="assets/js/vendor/supabase.js"></script>
 <script type="module">
-import { sb, deviceId, areaId, setArea, getGift, getCart, cartTotal, clearCart, sar }
-  from './assets/js/core.js';
-import { $, esc, toast, requireConfig, customerNav, initPWA } from './assets/js/ui.js';
+import { sb, deviceId, areaId, setArea, getGift, setGift } from './assets/js/core.js';
+import { $, esc, toast, modal, requireConfig, customerNav, initPWA } from './assets/js/ui.js';
 
-document.body.insertAdjacentHTML('beforeend', customerNav('gift'));
+$('#nav').innerHTML = customerNav('gift');
 if (!requireConfig()) throw new Error('not configured');
 
-const gift = getGift(), cart = getCart();
-if (!gift || !cart.length) { location.replace('gift.html'); throw new Error('bad state'); }
-
-const rid = gift.restaurant.id;
-const { data: menu } = await sb.rpc('restaurant_menu', { p_restaurant: rid });
-const R = menu.restaurant;
-const { data: areaRows } = await sb.rpc('active_areas');
-const areas = areaRows || [];
-const val = k => localStorage.getItem(k) || '';
-
-const sub = cartTotal();
-// قيمة الهدية تُحسب بنفس منطق قاعدة البيانات
-let disc;
-if (gift.gift.kind === 'fixed_amount') disc = Math.min(Number(gift.gift.discount), sub);
-else disc = Math.round(sub * gift.gift.discount) / 100;
-const total = Math.round((sub - disc) * 100) / 100;
-
-const GIFT_TEXT = {
-  percent:      (v) => `خصم ${v}%`,
-  fixed_amount: (v) => `هدية ${v} ر.س`,
-  free_item:    ()   => gift.gift.gift_label || 'صنف مجاني'
+/* أيقونات SVG بدل الإيموجي */
+const svg = (inner, s = 22, sw = 1.8) =>
+  `<svg width="${s}" height="${s}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="${sw}" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${inner}</svg>`;
+const ICON = {
+  gift:  (s, sw) => svg(`<rect x="3" y="8" width="18" height="4" rx="1"/><path d="M12 8v13"/><path d="M19 12v7a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2v-7"/><path d="M7.5 8a2.5 2.5 0 0 1 0-5C11 3 12 8 12 8s1-5 4.5-5a2.5 2.5 0 0 1 0 5"/>`, s, sw),
+  store: (s, sw) => svg(`<path d="M15 21v-8a1 1 0 0 0-1-1h-4a1 1 0 0 0-1 1v8"/><path d="M3 10a2 2 0 0 1 .709-1.528l7-6a2 2 0 0 1 2.582 0l7 6A2 2 0 0 1 21 10v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/>`, s, sw),
+  cart:  (s, sw) => svg(`<circle cx="8" cy="21" r="1"/><circle cx="19" cy="21" r="1"/><path d="M2.05 2.05h2l2.66 12.42a2 2 0 0 0 2 1.58h9.78a2 2 0 0 0 1.95-1.57l1.65-7.43H5.12"/>`, s, sw),
+  cash:  (s, sw) => svg(`<rect x="2" y="6" width="20" height="12" rx="2"/><circle cx="12" cy="12" r="2.5"/><path d="M6 12h.01M18 12h.01"/>`, s, sw),
+  pin:   (s, sw) => svg(`<path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z"/><circle cx="12" cy="10" r="3"/>`, s, sw),
+  clock: (s, sw) => svg(`<circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/>`, s, sw),
+  alert: (s, sw) => svg(`<path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><path d="M12 9v4M12 17h.01"/>`, s, sw),
+  check: (s, sw) => svg(`<circle cx="12" cy="12" r="9"/><path d="m8.5 12.5 2.5 2.5 4.5-5"/>`, s, sw),
+  refresh: (s, sw) => svg(`<path d="M21 12a9 9 0 1 1-3-6.7L21 8"/><path d="M21 3v5h-5"/>`, s, sw),
+  arrow: (s, sw) => svg(`<path d="M19 12H5M11 18l-6-6 6-6"/>`, s, sw)
 };
-const giftText = GIFT_TEXT[gift.gift.kind || 'percent'](gift.gift.discount);
 
-$('#app').innerHTML = `
-  <div class="page-head">
-    <h1 class="page-title">إتمام الطلب</h1>
-    <p class="page-sub">${esc(R.name)}</p>
-  </div>
+let areas = [];
+const stage = $('#stage');
 
-  <div class="alert alert-info">💵 الدفع يتم مباشرة مع المنشأة — عند الاستلام أو عند توصيلها.
-    لا يتم أي دفع إلكتروني عبر المنصة.</div>
-
-  <div class="card">
-    <h3 class="section-title" style="margin-top:0;font-size:15px">1️⃣ طريقة الاستلام</h3>
-    <label class="check"><input type="radio" name="otype" value="pickup"
-      ${R.pickup_enabled ? 'checked' : ''} ${R.pickup_enabled ? '' : 'disabled'}>
-      <span><b>استلام من المنشأة</b><br><span class="small muted">اختر وقت الاستلام</span></span></label>
-    <label class="check"><input type="radio" name="otype" value="delivery"
-      ${!R.pickup_enabled && R.delivery_enabled ? 'checked' : ''}
-      ${R.delivery_enabled ? '' : 'disabled'}>
-      <span><b>توصيل من المنشأة</b><br>
-      <span class="small muted">${R.delivery_enabled ? 'توفره المنشأة بنفسها'
-        : 'غير متاح من هذه المنشأة حالياً'}</span></span></label>
-
-    ${R.pickup_enabled ? `
-    <div id="slotBox" class="field mt">
-      <label class="label">وقت الاستلام</label>
-      <select class="input" id="slot">
-        ${(menu.slots || []).map(s => `<option value="${s}">${s}</option>`).join('')
-          || '<option value="">لا توجد أوقات محددة</option>'}
-      </select>
-      <p class="hint">أوقات الاستلام يحددها المنشأة من جدول الوقت الخاص بها.</p>
-    </div>` : ''}
-  </div>
-
-  <div class="card mt">
-    <h3 class="section-title" style="margin-top:0;font-size:15px">2️⃣ بيانات التواصل</h3>
-    <div class="field"><label class="label">الاسم</label>
-      <input class="input" id="cname" value="${esc(val('hg_name'))}" placeholder="اسمك الكامل"></div>
-    <div class="row2">
-      <div class="field"><label class="label">رقم الجوال</label>
-        <input class="input" id="cphone" value="${esc(val('hg_phone'))}" inputmode="tel"
-          placeholder="05xxxxxxxx"></div>
-      <div class="field"><label class="label">الحي</label>
-        <select class="input" id="carea">
-          <option value="">— اختر —</option>
-          ${areas.map(a => `<option value="${a.id}" ${areaId() === a.id ? 'selected' : ''}
-            >${esc(a.name)}</option>`).join('')}
-        </select></div>
-    </div>
-    <div class="field" id="addrBox"><label class="label">العنوان (للتوصيل)</label>
-      <input class="input" id="caddr" value="${esc(val('hg_addr'))}"
-        placeholder="الحي، الشارع، أقرب معلم"></div>
-    <div class="field"><label class="label">ملاحظة للمنشأة (اختياري)</label>
-      <textarea class="input" id="cnote" placeholder="مثال: بدون بصل"></textarea></div>
-  </div>
-
-  <div class="card mt">
-    <h3 class="section-title" style="margin-top:0;font-size:15px">3️⃣ الموافقات</h3>
-    <label class="check"><input type="checkbox" id="c1">
-      <span>أوافق على مشاركة رقم جوالي مع المنشأة للتواصل بخصوص هذا الطلب.</span></label>
-    <label class="check"><input type="checkbox" id="c2">
-      <span>(اختياري) أوافق على تلقي عروض وتسويق من المنشأة.</span></label>
-    <p class="hint">موافقة التسويق ليست شرطاً لاستخدام الخدمة. يُسجَّل نوع الموافقة ووقتها.
-      <br><b>ملاحظة:</b> المتطلبات النظامية لحماية البيانات
-      <span class="badge badge-orange">تحتاج تحققاً رسمياً</span></p>
-  </div>
-
-  <div class="card mt">
-    <div class="between"><span>الإجمالي قبل الخصم</span><span>${sar(sub)}</span></div>
-    <div class="between" style="color:var(--orange-deep)">
-      <span>${esc(giftText)}</span>
-      <span>− ${sar(disc)}</span></div>
-    ${gift.gift.kind === 'free_item' ? `<div class="alert alert-info mt">
-      🎁 ${esc(gift.gift.gift_label || 'الصنف المجاني')} سيُضاف للطلب تلقائياً وسعره صفر.</div>` : ''}
-    <div class="between" style="font-weight:700;font-size:18px;border-top:1px solid var(--line);
-      padding-top:10px;margin-top:6px">
-      <span>المطلوب دفعه</span><span>${sar(total)}</span></div>
-    <button class="btn btn-primary btn-block btn-lg mt" id="submit">تأكيد الطلب</button>
-    <p class="hint center">الدفع يتم مباشرة مع المنشأة. لا رسوم على المنصة إلا عند اكتمال الطلب.</p>
-  </div>`;
-
-const otype = () => document.querySelector('input[name=otype]:checked')?.value;
-function syncFields() {
-  const isPickup = otype() === 'pickup';
-  $('#addrBox').style.display = isPickup ? 'none' : 'block';
-  if ($('#slotBox')) $('#slotBox').style.display = isPickup ? 'block' : 'none';
+async function loadAreas() {
+  const { data } = await sb.rpc('active_areas');
+  areas = data || [];
+  renderAreaLabel();
 }
-document.querySelectorAll('input[name=otype]').forEach(r => r.onchange = syncFields);
-syncFields();
-
-const ERRORS = {
-  consent_required: 'يجب الموافقة على مشاركة رقم الجوال للمطعم.',
-  gift_already_used: 'تم استخدام هذه الهدية مسبقاً.',
-  empty_cart: 'السلة فارغة.',
-  below_min_order: 'الطلب أقل من الحد الأدنى للمطعم.',
-  pickup_slot_required: 'اختر وقت الاستلام.',
-  delivery_not_available: 'هذه المنشأة لا توفر توصيل.',
-  pickup_not_available: 'هذه المنشأة لا توفر استلام.',
-  restaurant_unavailable: 'المنشأة غير متاحة حالياً.',
-  gift_not_found: 'الهدية غير موجودة.'
+function renderAreaLabel() {
+  const a = areas.find(x => x.id === areaId());
+  $('#areaLabel').textContent = a ? a.name : 'كل بريدة';
+}
+$('#areaBtn').onclick = () => {
+  const close = modal(`
+    <h3 class="modal-title" style="display:flex;align-items:center;gap:8px">
+      <span style="color:var(--orange)">${ICON.pin(20, 2)}</span> اختر حيّك</h3>
+    <p class="hint mb">نستخدم الحي لعرض مطاعم وعروض قريبة منك فقط.</p>
+    <label class="check"><input type="radio" name="ar" value="" ${areaId() ? '' : 'checked'}> كل بريدة</label>
+    ${areas.map(a => `<label class="check"><input type="radio" name="ar" value="${a.id}"
+      ${areaId() === a.id ? 'checked' : ''}> ${esc(a.name)}</label>`).join('')}
+    <button class="btn btn-primary btn-block mt" id="ar-save">حفظ</button>`);
+  const m = document.querySelector('.modal-bg:last-child .modal');
+  m.querySelector('#ar-save').onclick = () => {
+    setArea(m.querySelector('input[name=ar]:checked')?.value || '');
+    renderAreaLabel(); close(); render();
+  };
 };
 
-$('#submit').onclick = async () => {
-  const name = $('#cname').value.trim();
-  const phone = $('#cphone').value.trim();
-  if (!name) return toast('أدخل الاسم');
-  if (!/^05\d{8}$/.test(phone.replace(/[\s-]/g, ''))) return toast('أدخل رقم جوال صحيح يبدأ بـ 05');
-  if (!$('#c1').checked) return toast('الموافقة على مشاركة الرقم مطلوبة');
-  if (otype() === 'pickup' && !R.pickup_enabled) return toast('هذه المنشأة لا توفر استلام');
-  if (otype() === 'delivery' && !R.delivery_enabled) return toast('هذه المنشأة لا توفر توصيل');
-  if (otype() === 'delivery' && !$('#caddr').value.trim()) return toast('أدخل العنوان للتوصيل');
+function stageClosed() {
+  const steps = [
+    [1, ICON.gift(19), 'افتح هدية واحدة كل يوم'],
+    [2, ICON.store(19), 'تظهر لك هدية من منشأة قريبة'],
+    [3, ICON.cart(19), 'اطلب من قائمتها مباشرة'],
+    [4, ICON.cash(19), 'الدفع يتم مباشرة مع المنشأة']
+  ];
+  return `
+    <section class="gift-hero">
+      <div class="gh-box">${ICON.gift(48, 1.4)}</div>
+      <h1 class="gh-title">هدية اليوم</h1>
+      <p class="gh-text">كل يوم لك هدية من منشأة قريبة منك. قيمة الهدية تُكشف عند الفتح فقط.</p>
+      <div class="gh-line"></div>
+      <button class="gh-btn" id="openBtn" type="button">${ICON.gift(18, 2)} افتح هديتك</button>
+      <p class="gh-foot">هدية واحدة يومياً لكل جهاز</p>
+    </section>
 
-  const slotVal = $('#slot')?.value;
-  if (otype() === 'pickup' && !slotVal) {
-    return toast('المنشأة لم تحدد أوقات استلام — تواصل معه أو غداً');
+    <section class="how-card">
+      <div class="how-head">
+        <div>
+          <b>كيف تعمل؟</b>
+          <small>افتح · اكتشف · اطلب مباشرة</small>
+        </div>
+        <span class="pill-orange">بلا تسجيل</span>
+      </div>
+      <div class="how-list">
+        ${steps.map(([n, ico, t]) => `
+          <div class="how-item">
+            <span class="how-ico">${ico}</span>
+            <span class="how-txt">${t}</span>
+            <span class="how-num">${n}</span>
+          </div>`).join('')}
+      </div>
+    </section>`;
+}
+
+function stageNoOffer() {
+  return `
+    <div class="state-card">
+      <div class="state-ico">${ICON.clock(32, 1.6)}</div>
+      <h2>لا توجد هدية متاحة حالياً</h2>
+      <p>حاول لاحقاً. قد تكون عروض اليوم قد انتهت أو أن المنشآت القريبة نفدت من عروضها.</p>
+      <button class="state-btn" type="button" onclick="location.reload()">${ICON.refresh(16, 2)} تحديث</button>
+    </div>`;
+}
+
+function stageOpened(d) {
+  const g = d.gift, r = d.restaurant, o = d.offer || {};
+
+  // الهدية قد تكون: خصم % / مبلغ ثابت / صنف مجاني
+  let bigValue, bigUnit, headline;
+  if (g.kind === 'free_item') {
+    bigValue = ICON.gift(64, 1.4);
+    bigUnit = '';
+    headline = g.gift_label || 'صنف مجاني';
+  } else if (g.kind === 'fixed_amount') {
+    bigValue = esc(g.discount);
+    bigUnit = 'ر.س';
+    headline = `هدية بمبلغ ثابت من ${esc(r.name)}`;
+  } else {
+    bigValue = esc(g.discount);
+    bigUnit = '%';
+    headline = `خصم من ${esc(r.name)}`;
   }
 
-  localStorage.setItem('hg_name', name);
-  localStorage.setItem('hg_phone', phone);
-  localStorage.setItem('hg_addr', $('#caddr').value.trim());
-  setArea($('#carea').value);
+  return `
+    <section class="gift-hero reveal-card">
+      <div class="gh-box">${ICON.gift(48, 1.4)}</div>
+      <p class="rv-label">هديتك اليوم</p>
+      <div class="rv-value">${bigValue}${bigUnit ? `<span class="rv-unit">${bigUnit}</span>` : ''}</div>
+      <p class="rv-head">${headline}</p>
+    </section>
 
-  const btn = $('#submit');
+    <section class="shop-card">
+      <div class="shop-row">
+        ${r.logo_url ? `<img class="shop-logo" src="${esc(r.logo_url)}" alt="">`
+          : `<div class="shop-ph">${ICON.store(26, 1.7)}</div>`}
+        <div class="grow">
+          <div class="shop-name">${esc(r.name)}</div>
+          <div class="shop-addr">${esc(r.address || 'بريدة')}</div>
+        </div>
+      </div>
+
+      ${o.title ? `<p class="shop-note"><b>${esc(o.title)}</b></p>` : ''}
+      ${o.description ? `<p class="shop-note" style="margin-top:2px">${esc(o.description)}</p>` : ''}
+
+      ${g.kind === 'free_item' ? `<div class="ok-box">${ICON.check(18, 2)}
+        <div>ستُضاف هديتك للطلب تلقائياً عند إتمام الطلب.
+        ${g.gift_label ? '<br><b>' + esc(g.gift_label) + '</b>' : ''}</div></div>` : ''}
+
+      <div class="chips">
+        ${r.pickup_enabled ? '<span class="badge badge-green">استلام متاح</span>' : ''}
+        ${r.delivery_enabled ? '<span class="badge badge-blue">توصيل المنشأة</span>' : ''}
+        <span class="badge">التحضير ~${esc(r.prep_time_min)} دقيقة</span>
+        ${o.expires_at ? `<span class="badge badge-orange">ينتهي ${new Date(o.expires_at)
+          .toLocaleDateString('ar-SA')}</span>` : ''}
+      </div>
+
+      <button class="order-btn" id="orderNow" type="button">اطلب الآن ${ICON.arrow(19, 2.2)}</button>
+      ${g.redeemed ? `<div class="ok-box">${ICON.check(18, 2)}<div>تم استخدام هذه الهدية في طلب.</div></div>` : ''}
+      <p class="pay-hint">${ICON.cash(16, 1.9)} الدفع يتم مباشرة مع المنشأة. لا يوجد دفع إلكتروني عبر المنصة.</p>
+    </section>`;
+}
+
+async function render() {
+  const cached = getGift();
+  if (cached) { stage.innerHTML = stageOpened(cached); wire(cached); return; }
+  stage.innerHTML = stageClosed();
+  $('#openBtn').onclick = open;
+}
+
+const OPEN_ERRORS = {
+  device_required: 'تعذّر التعرّف على هذا الجهاز. تأكد أن المتصفح يسمح بالتخزين المحلي.',
+  no_offers_available: null   // له رسالة ودّية خاصة
+};
+
+async function open() {
+  const btn = $('#openBtn');
   btn.disabled = true;
-  btn.innerHTML = '<span class="spin"></span> جارٍ الإرسال…';
-
-  const { data, error } = await sb.rpc('create_order', {
-    p_device: deviceId(),
-    p_gift: gift.gift.id,
-    p_type: otype(),
-    p_items: cart.map(i => ({ item_id: i.id, qty: i.qty })),
-    p_name: name,
-    p_phone: phone,
-    p_area: $('#carea').value ? Number($('#carea').value) : null,
-    p_address: $('#caddr').value.trim() || null,
-    p_slot: otype() === 'pickup' ? slotVal : null,
-    p_note: $('#cnote').value.trim() || null,
-    p_consent_order_contact: true,
-    p_consent_marketing: $('#c2').checked
+  btn.innerHTML = '<span class="spin-i"></span> جارٍ الفتح…';
+  const { data, error } = await sb.rpc('open_daily_gift', {
+    p_device: deviceId(), p_area: areaId()
   });
-
-  if (error || !data?.ok) {
-    btn.disabled = false;
-    btn.textContent = 'تأكيد الطلب';
-    return toast(ERRORS[data?.error] || 'تعذّر إنشاء الطلب');
+  if (error) {
+    stage.innerHTML = stageError('تعذّر فتح الهدية');
+    return;
   }
+  if (!data?.ok) {
+    if (data.error === 'no_offers_available') { stage.innerHTML = stageNoOffer(); return; }
+    stage.innerHTML = stageError(
+      OPEN_ERRORS[data.error] || 'تعذّر فتح الهدية حالياً');
+    return;
+  }
+  setGift(data);
+  stage.innerHTML = stageOpened(data);
+  wire(data);
+  toast('لديك هدية اليوم!');
+}
 
-  clearCart();
-  localStorage.setItem('hg_gift', JSON.stringify({
-    ...gift, gift: { ...gift.gift, redeemed: true }
-  }));
-  toast('✅ تم إرسال الطلب للمطعم');
-  setTimeout(() => location.href = `order.html?code=${data.code}`, 700);
-};
+function stageError(msg) {
+  return `<div class="state-card">
+    <div class="state-ico">${ICON.alert(32, 1.6)}</div>
+    <h2>${esc(msg)}</h2>
+    <button class="state-btn" type="button" onclick="location.reload()">${ICON.refresh(16, 2)} إعادة المحاولة</button>
+  </div>`;
+}
+
+function wire(d) {
+  $('#orderNow')?.addEventListener('click', () => {
+    if (d.gift.redeemed) { location.href = 'orders.html'; return; }
+    location.href = 'menu.html';
+  });
+}
+
+await loadAreas();
+await render();
 initPWA();
 </script>
 </body>
