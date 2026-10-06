@@ -15,12 +15,17 @@ const validUrl = value => {
 };
 const validKey = value => typeof value === 'string' && value.length > 20 &&
   !value.includes('YOUR-ANON-KEY');
+const localDevelopment = ['localhost', '127.0.0.1', '[::1]'].includes(location.hostname);
+const runtimeUrl = validUrl(runtime.supabaseUrl) ? runtime.supabaseUrl.trim() : '';
+const runtimeKey = validKey(runtime.supabaseAnonKey) ? runtime.supabaseAnonKey.trim() : '';
 const storedUrl = localStorage.getItem('hg_url')?.trim();
 const storedKey = localStorage.getItem('hg_key')?.trim();
 
 export const CFG = {
-  url:  validUrl(storedUrl) ? storedUrl : (validUrl(runtime.supabaseUrl) ? runtime.supabaseUrl : PLACEHOLDER_URL),
-  anon: validKey(storedKey) ? storedKey : (validKey(runtime.supabaseAnonKey) ? runtime.supabaseAnonKey : PLACEHOLDER_KEY),
+  // The deployed project config must win over browser-local development values.
+  // Otherwise a stale localStorage value can break the site in one browser only.
+  url:  runtimeUrl || (localDevelopment && validUrl(storedUrl) ? storedUrl : PLACEHOLDER_URL),
+  anon: runtimeKey || (localDevelopment && validKey(storedKey) ? storedKey : PLACEHOLDER_KEY),
 };
 
 export const isConfigured = () =>

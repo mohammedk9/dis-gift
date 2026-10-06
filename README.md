@@ -34,11 +34,18 @@ npx serve .          # أو أي سيرفر ملفات ثابت
 > لكن **RLS على anon مفصول بـrevoke**، لذا `http://localhost` آمن للتطوير.
 
 ### ج) ربط الواجهة
-عند أول فتح لأي صفحة سيظهر شاشة "إعداد الاتصال". أدخل:
-- **Project URL**: `https://xxxx.supabase.co`
-- **Anon Key**: من Project Settings → API
+في النشر على GitHub Pages يجب إضافة القيمتين في إعدادات المستودع أو بيئة
+`github-pages` تحت **Settings → Secrets and variables → Actions**:
+- `SUPABASE_URL`: رابط مشروعك مثل `https://xxxx.supabase.co`
+- `SUPABASE_ANON_KEY`: المفتاح العام (anon/publishable key) من Project Settings → API
 
-تُحفظ محلياً في المتصفح (اسم زر "مسح بيانات الجهاز" يمسحها).
+ينشئ workflow ملف `assets/js/runtime-config.js` أثناء النشر. لا تضع `service_role`
+key في المستودع أو في الواجهة. الإدخال المحلي محفوظ في المتصفح للتطوير فقط، ولا
+يُطلب من العملاء على الموقع المنشور.
+
+بعد تشغيل SQL migrations، تأكد من تطبيق `0005_site_visitors.sql` حتى يعمل عداد
+الزوار في الصفحة الرئيسية؛ هذا الملف ينشئ دالة `site_visitor_count()` ويمنحها
+صلاحية التنفيذ للزوار.
 
 ### د) النشر (اختياري — مجاني)
 ارفع المجلد كما هو على Vercel / Netlify كـ static site. لا build step ولا متغيرات بيئة.

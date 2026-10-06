@@ -58,22 +58,30 @@ export const confirmBox = (title, body, okLabel = 'تأكيد') => new Promise(r
 /* ---------- Config gate ---------- */
 export function requireConfig() {
   if (isConfigured()) return true;
+  const localDevelopment = ['localhost', '127.0.0.1', '[::1]'].includes(location.hostname);
   document.body.innerHTML = `<div class="container" style="padding-top:60px">
     <div class="card">
-      <h2 class="page-title mb">⚙️ إعداد الاتصال مطلوب</h2>
-      <p class="muted small">أدخل رابط مشروع Supabase والمفتاح العام (anon key).</p>
-      <div class="field"><label class="label">Project URL</label>
+      <h2 class="page-title mb">${localDevelopment ? '⚙️ إعداد الاتصال مطلوب' : 'الخدمة غير جاهزة مؤقتاً'}</h2>
+      <p class="muted small">${localDevelopment
+        ? 'أدخل رابط مشروع Supabase والمفتاح العام (anon key) للتطوير المحلي.'
+        : 'لم يتم تحميل إعدادات الاتصال بالمشروع بعد. لا يحتاج العميل إلى إدخال أي مفاتيح؛ أعد المحاولة بعد اكتمال النشر.'}</p>
+      ${localDevelopment ? `<div class="field"><label class="label">Project URL</label>
         <input class="input" id="c-url" placeholder="https://xxxx.supabase.co"></div>
-      <div class="field"><label class="label">Anon Key</label>
-        <input class="input" id="c-key" placeholder="eyJhbGciOi..."></div>
-      <button class="btn btn-primary btn-block" id="c-save">حفظ</button>
-      <p class="hint">تُحفظ القيم محلياً في هذا المتصفح فقط.</p>
+        <div class="field"><label class="label">Anon Key</label>
+          <input class="input" id="c-key" placeholder="eyJhbGciOi..."></div>
+        <button class="btn btn-primary btn-block" id="c-save">حفظ</button>
+        <p class="hint">تُحفظ القيم محلياً في هذا المتصفح فقط.</p>` :
+        '<button class="btn btn-primary btn-block" id="c-reload">إعادة المحاولة</button>'}
     </div></div>`;
-  $('#c-save').onclick = () => {
-    localStorage.setItem('hg_url', $('#c-url').value.trim());
-    localStorage.setItem('hg_key', $('#c-key').value.trim());
-    location.reload();
-  };
+  if (localDevelopment) {
+    $('#c-save').onclick = () => {
+      localStorage.setItem('hg_url', $('#c-url').value.trim());
+      localStorage.setItem('hg_key', $('#c-key').value.trim());
+      location.reload();
+    };
+  } else {
+    $('#c-reload').onclick = () => location.reload();
+  }
   return false;
 }
 

@@ -17,6 +17,10 @@ concurrency:
 jobs:
   build:
     runs-on: ubuntu-latest
+    # Allow secrets stored under the GitHub Pages environment as well as
+    # repository secrets to be read during the build step.
+    environment:
+      name: github-pages
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -26,19 +30,24 @@ jobs:
 
       - name: Generate public Supabase runtime config
         env:
-          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
-          SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY }}
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL || vars.SUPABASE_URL }}
+          SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY || vars.SUPABASE_ANON_KEY }}
         run: |
-          if [ -z "${SUPABASE_URL}" ] || [ -z "${SUPABASE_ANON_KEY}" ]; then
-            echo "Missing SUPABASE_URL or SUPABASE_ANON_KEY repository secret."
-            exit 1
-          fi
+          set -euo pipefail
           node <<'NODE'
           const fs = require('fs');
-          const config = {
-            supabaseUrl: process.env.SUPABASE_URL,
-            supabaseAnonKey: process.env.SUPABASE_ANON_KEY
-          };
+          const url = (process.env.SUPABASE_URL || '').trim();
+          const key = (process.env.SUPABASE_ANON_KEY || '').trim();
+          let parsed;
+          try { parsed = new URL(url); } catch { parsed = null; }
+          if (!parsed || !['http:', 'https:'].includes(parsed.protocol) || !parsed.hostname ||
+              parsed.hostname === 'YOUR-PROJECT.supabase.co' || key.length < 20 ||
+              key.includes('YOUR-ANON-KEY')) {
+            console.error('Missing or invalid Supabase runtime configuration.');
+            console.error('Set SUPABASE_URL and SUPABASE_ANON_KEY as repository/environment secrets or variables.');
+            process.exit(1);
+          }
+          const config = { supabaseUrl: url, supabaseAnonKey: key };
           fs.writeFileSync(
             'assets/js/runtime-config.js',
             'window.__HADIYA_CONFIG__ = Object.freeze(' + JSON.stringify(config) + ');\n',
