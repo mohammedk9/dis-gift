@@ -1,0 +1,206 @@
+﻿<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>مسح الباركود | لوحة المنشأة</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Arabic:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../assets/css/app.css">
+<style>
+  .scan-box{background:linear-gradient(135deg,#fff6e5,#ffe9d4);border:0;border-radius:24px;padding:20px}
+  .scan-input{font-size:20px;letter-spacing:4px;text-align:center;font-weight:700;
+    text-transform:uppercase;font-family:ui-monospace,Menlo,Consolas,monospace}
+  .scan-code{font-family:ui-monospace,Menlo,Consolas,monospace;font-weight:700;letter-spacing:3px}
+</style>
+</head>
+<body>
+<header class="nav"><div class="container nav-inner">
+  <a class="brand" href="./"><span class="brand-mark">🎁</span>
+    <span><span class="brand-name">هدية</span><br><span class="brand-sub">مسح الباركود</span></span></a>
+</div></header>
+<div id="tabs"></div>
+<main class="container" id="app" style="padding-bottom:40px"></main>
+<script src="../assets/js/runtime-config-live.js"></script>
+<script src="../assets/js/vendor/supabase.js"></script>
+<script type="module">
+import { sb, sar, STATUS_AR, STATUS_CLASS } from '../assets/js/core.js';
+import { $, esc, toast, requireConfig, guardStaff } from '../assets/js/ui.js';
+
+if (!requireConfig()) throw new Error('not configured');
+const auth = await guardStaff({ allowAdmin: false });
+if (!auth) throw new Error('unauthorized');
+
+$('#tabs').innerHTML = `<div class="container"><div class="tabs">
+  ${[['d','اللوحة','./'],['o','الطلبات','./orders.html'],['m','المنيو','./menu.html'],
+     ['f','العروض','./offers.html'],['c','مسح الباركود','./scan.html'],
+     ['s','كشف الحساب','./statement.html'],
+     ['p','الملف','./profile.html']].map(([k,l,h]) =>
+    `<a class="tab ${k==='c'?'active':''}" href="${h}">${l}</a>`).join('')}
+</div></div>`;
+
+/* كل رمز خطأ يُعاد من السيرفر له رسالة مفهومة هنا — لا رسالة عامة */
+const ERRORS = {
+  invalid_order_code: 'الكود غير صحيح — كود الطلب 6 خانات (أرقام وحروف A-F).',
+  order_not_found: 'لا يوجد طلب بهذا الكود في منشأتك.',
+  no_restaurant: 'هذا الحساب غير مرتبط بمنشأة.',
+  forbidden: 'غير مسموح لهذا الحساب.',
+  invalid_transition: 'لا يمكن الانتقال إلى هذه الحالة من حالة الطلب الحالية.',
+  price_not_confirmed: 'بانتظار تأكيد العميل للسعر قبل قبول الطلب.',
+  points_disabled: 'النقاط غير مُفعَّلة — فعّلها من «ملف المنشأة».',
+  points_invalid: 'مبلغ النقاط غير صحيح — أدخل عدداً أكبر من صفر.',
+  points_limit: 'مبلغ النقاط يتجاوز الحد الأعلى المسموح.',
+  points_already_granted: 'نقاط هذا الطلب مُنحت مسبقاً — لا تُكرَّر على الطلب نفسه.'
+};
+
+const NEXT = {
+  new:      [['accepted','قبول'], ['cancelled','رفض']],
+  accepted: [['preparing','بدء التجهيز'], ['cancelled','إلغاء']],
+  preparing:[['ready','جاهز'], ['cancelled','إلغاء']],
+  ready:    [['completed','✅ تم التسليم'], ['no_show','لم يحضر']],
+  completed:[], cancelled:[], no_show:[]
+};
+
+let current = null;   // نتيجة البحث الأخيرة
+
+function shell(body) {
+  $('#app').innerHTML = `
+    <div class="page-head">
+      <h1 class="page-title">مسح الباركود</h1>
+      <p class="page-sub">أدخل كود الطلب المطبوع تحت باركود العميل</p>
+    </div>
+    <div class="card scan-box">
+      <div class="field" style="margin:0">
+        <label class="label" for="code">كود الطلب</label>
+        <input class="input scan-input" id="code" inputmode="text" autocomplete="off"
+          maxlength="12" placeholder="A1B2C3" value="${esc(current?.order?.code || '')}">
+        <p class="hint">نفس الكود الظاهر في طلب العميل وفي الفاتورة. لا يلزم تطبيق كاميرا:
+          اكتب الخانات الست كما هي.</p>
+      </div>
+      <button class="btn btn-primary btn-block btn-lg mt" id="lookup">اعرض الطلب</button>
+    </div>
+    ${body || ''}`;
+
+  $('#lookup').onclick = () => lookup($('#code').value);
+  $('#code').addEventListener('keydown', e => { if (e.key === 'Enter') lookup($('#code').value); });
+  $('#code').focus();
+}
+
+function pointsLine(p, s) {
+  if (p.granted) {
+    return `<div class="between small"><span>النقاط على هذا الطلب</span>
+      <b>${p.granted} ${p.status === 'pending' ? '(معلَّقة — تُعتمد عند الاكتمال)' : '(معتمدة)'}</b></div>`;
+  }
+  if (!s.points_enabled) {
+    return '<p class="hint">النقاط غير مُفعَّلة لهذه المنشأة — فعّلها من «ملف المنشأة» لمنحها.</p>';
+  }
+  return `<div class="field"><label class="label">عدد النقاط</label>
+      <input class="input" id="ppoints" inputmode="numeric"
+        value="${Number(s.points_per_order || 0)}" placeholder="عدد النقاط"></div>
+    <p class="hint">الحد الأعلى لكل طلب: ${Number(s.points_max_per_order || s.points_cap || 0)} نقطة.
+      تُمنح مرة واحدة لكل طلب، ولا تُعتمد إلا عند اكتماله.</p>
+    <button class="btn btn-primary btn-block" id="grant">⭐ منح النقاط</button>`;
+}
+
+function orderCard(res) {
+  const o = res.order, p = res.points, s = res.settings;
+  const dead = ['cancelled','no_show'].includes(o.status);
+  const blocked = o.awaiting_price_confirmation && o.status === 'new';
+  const actions = dead ? [] : (NEXT[o.status] || []).filter(([st]) => !(blocked && st === 'accepted'));
+  return `<div class="card mt">
+    <div class="between">
+      <div>
+        <div class="scan-code">#${esc(o.code)}</div>
+        <div style="font-weight:700;margin-top:4px">${esc(o.customer_name)}</div>
+        <div class="small muted" dir="ltr">${esc(o.customer_phone || '—')}${
+          o.phone_shared ? '' : ' · الرقم غير مُشارَك'}</div>
+      </div>
+      <div style="text-align:left">
+        <span class="badge ${STATUS_CLASS[o.status] || ''}">${STATUS_AR[o.status] || o.status}</span>
+        <div style="font-weight:700;font-size:17px;margin-top:6px">${sar(o.total)}</div>
+      </div>
+    </div>
+
+    <div class="flex" style="gap:6px;margin-top:10px;flex-wrap:wrap">
+      <span class="badge">${o.order_type === 'pickup' ? 'استلام' : 'توصيل'}</span>
+      ${o.pickup_slot ? `<span class="badge" dir="ltr">${esc(o.pickup_slot)}</span>` : ''}
+      ${o.delivery_fee > 0 ? `<span class="badge badge-blue">توصيل ${sar(o.delivery_fee)}</span>` : ''}
+      ${o.gift_code ? `<span class="badge badge-orange">كود الهدية <b dir="ltr">${esc(o.gift_code)}</b></span>` : ''}
+      ${blocked ? '<span class="badge badge-orange">بانتظار تأكيد العميل للسعر</span>' : ''}
+    </div>
+
+    ${o.address ? `<p class="small muted mt">📍 ${esc(o.address)}</p>` : ''}
+    ${o.note ? `<p class="small muted">📝 ${esc(o.note)}</p>` : ''}
+
+    <div class="mt" style="border-top:1px solid var(--line);padding-top:10px">
+      ${o.items.map(i => `<div class="between small" style="padding:3px 0">
+        <span>${esc(i.name)} × ${i.qty}</span><span>${sar(i.line_total)}</span></div>`).join('')}
+      ${o.discount > 0 ? `<div class="between small" style="color:var(--orange-deep)">
+        <span>خصم هدية (تحمّله المنشأة)</span><span>− ${sar(o.discount)}</span></div>` : ''}
+    </div>
+
+    <div class="mt" style="border-top:1px solid var(--line);padding-top:10px">
+      <div style="font-weight:700;margin-bottom:8px">النقاط</div>
+      ${pointsLine(p, s)}
+      <div class="between small muted mt"><span>رصيد العميل المعتمد</span>
+        <b>${Number(p.customer_balance || 0)} نقطة</b></div>
+      <p class="hint">النقاط استحقاق وعرض فقط في هذه المرحلة — لا استبدال ولا خصم.</p>
+    </div>
+
+    ${blocked ? `<p class="hint">لا يمكن القبول قبل أن يؤكد العميل المبلغ ${sar(o.total)}.
+      يمكنك الرفض إن لم يوافق.</p>` : ''}
+
+    ${actions.length ? `<div class="flex mt" style="gap:8px">
+      ${actions.map(([st,l]) => `<button class="btn btn-sm grow ${
+        st === 'cancelled' || st === 'no_show' ? 'btn-red'
+        : st === 'completed' ? 'btn-green' : 'btn-primary'}"
+        data-act="${st}">${l}</button>`).join('')}
+    </div>` : ''}
+  </div>`;
+}
+
+async function lookup(rawCode) {
+  const code = String(rawCode || '').trim();
+  if (!code) return toast('أدخل كود الطلب');
+  const { data } = await sb.rpc('staff_order_by_code', { p_code: code });
+  if (!data?.ok) {
+    current = null;
+    shell(`<div class="card mt"><p class="small">${esc(ERRORS[data?.error] || 'تعذّر قراءة الطلب')}</p></div>`);
+    return;
+  }
+  current = data;
+  shell(orderCard(data));
+  $('#app').querySelectorAll('[data-act]').forEach(b => b.onclick = () => advance(b.dataset.act));
+  $('#grant')?.addEventListener('click', grant);
+}
+
+/* منح النقاط: المبلغ من الحقل، وإلا الافتراضي الذي حددته المنشأة */
+async function grant() {
+  if (!current) return;
+  const raw = $('#ppoints').value.trim();
+  const { data, error } = await sb.rpc('staff_grant_points', {
+    p_order: current.order.id, p_points: raw === '' ? null : Number(raw)
+  });
+  if (error || !data?.ok) return toast(ERRORS[data?.error] || 'تعذّر منح النقاط');
+  toast(data.status === 'applied'
+    ? `⭐ أُضيفت ${data.points} نقطة إلى رصيد العميل`
+    : `⭐ ${data.points} نقطة معلَّقة — تُعتمد عند اكتمال الطلب`);
+  await lookup(current.order.code);
+}
+
+async function advance(to) {
+  if (!current) return;
+  const { data, error } = await sb.rpc('transition_order',
+    { p_order: current.order.id, p_to: to, p_note: null });
+  if (error || !data?.ok) return toast(ERRORS[data?.error] || 'تعذّر تحديث الطلب');
+  toast(to === 'completed'
+    ? `✅ تم التسليم — ${data.points || 0} نقطة للعميل، ورسوم المنصة ${sar(data.platform_fee)}`
+    : 'تم التحديث');
+  await lookup(current.order.code);
+}
+
+shell();
+</script>
+</body>
+</html>

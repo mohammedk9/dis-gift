@@ -1,7 +1,12 @@
 /* فحص: هل الواجهة تتعامل مع كل رمز خطأ تُعيده قاعدة البيانات؟ */
 const fs = require('fs');
 const path = require('path');
-const sql = fs.readFileSync('supabase/migrations/0003_functions.sql', 'utf8');
+// كل ملفات الهجرات: أي رمز خطأ جديد يجب أن تُظهره الواجهة برسالة مفهومة.
+const MIGRATIONS = ['0001_schema', '0002_rls', '0003_functions', '0004_seed',
+  '0005_site_visitors', '0006_admin_bootstrap', '0007_whatsapp', '0008_delivery',
+  '0009_consents', '0010_loyalty'];
+const sql = MIGRATIONS
+  .map(n => fs.readFileSync('supabase/migrations/' + n + '.sql', 'utf8')).join('\n');
 
 const codes = new Set();
 for (const m of sql.matchAll(/'error',\s*'([a-z_]+)'/g)) codes.add(m[1]);
@@ -22,8 +27,8 @@ const t = (label, cond) => { cond ? pass++ : fail++; console.log((cond ? 'PASS  
 console.log('Backend error codes: ' + [...codes].sort().join(', ') + '\n');
 // codes the UI guards against *before* calling the backend (guard scripts)
 const PREGUARDED = {
-  already_registered: 'login.html',        // signup blocked client-side
-  auth_required:       'login.html',        // guardStaff redirects
+  already_registered: 'register.html',      // signup blocked client-side
+  auth_required:       'register.html',      // register form requires a session
   forbidden:           'guardStaff()',      // RLS/ownership error -> generic msg
   order_not_found:     'order.html',        // friendly "not found" screen
   no_offers_available: 'gift.html'          // friendly "no gift" screen
@@ -41,9 +46,11 @@ t('no_offers_available has a friendly message',
   /لا توجد هدية متاحة حالياً/.test(front));
 t('payment disclaimer shown at checkout',
   /الدفع يتم مباشرة مع المنشأة/.test(front) || /الدفع يتم مباشرة للمطعم/.test(front));
-const hasC1 = front.includes("!$('#c1').checked) return toast");
+const hasC1 = front.includes("otype() === 'delivery' && !$('#c1').checked");
+const hasC1Pickup = /otype\(\) === 'pickup' && !\$\('#c1'\)\.checked/.test(front);
 const hasC2Block = front.includes("!$('#c2').checked) return toast");
-t('order_contact consent IS required', hasC1);
+t('order_contact consent IS required for delivery', hasC1);
+t('order_contact consent is NOT required for pickup', !hasC1Pickup);
 t('marketing consent is NOT required (optional)', !hasC2Block);
 
 console.log('\n' + (fail === 0 ? '>>> ALL ERROR PATHS COVERED' : '>>> ' + fail + ' UNHANDLED'));

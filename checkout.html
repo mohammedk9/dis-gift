@@ -23,7 +23,8 @@
 <script type="module">
 import { sb, deviceId, areaId, setArea, getGift, getCart, cartTotal, clearCart, sar }
   from './assets/js/core.js';
-import { $, esc, toast, requireConfig, customerNav, initPWA } from './assets/js/ui.js';
+import { $, esc, toast, modal, requireConfig, customerNav, initPWA } from './assets/js/ui.js';
+import { openWhatsApp } from './assets/js/whatsapp.js';
 
 document.body.insertAdjacentHTML('beforeend', customerNav('gift'));
 if (!requireConfig()) throw new Error('not configured');
@@ -39,11 +40,17 @@ const areas = areaRows || [];
 const val = k => localStorage.getItem(k) || '';
 
 const sub = cartTotal();
+// رسوم التوصيل تأتي من السيرفر (restaurant_menu) — ما يظهر هنا للمعاينة فقط،
+// والرقم النهائي يبنيه create_order على السيرفر.
+const DELIVERY_FEE = Number(R.delivery_fee || 0);
+const otype = () => document.querySelector('input[name=otype]:checked')?.value;
+const feeFor = () => (otype() === 'delivery' ? DELIVERY_FEE : 0);
 // قيمة الهدية تُحسب بنفس منطق قاعدة البيانات
 let disc;
 if (gift.gift.kind === 'fixed_amount') disc = Math.min(Number(gift.gift.discount), sub);
 else disc = Math.round(sub * gift.gift.discount) / 100;
-const total = Math.round((sub - disc) * 100) / 100;
+const totalFor = () => Math.round((sub - disc + feeFor()) * 100) / 100;
+const total = totalFor();
 
 const GIFT_TEXT = {
   percent:      (v) => `خصم ${v}%`,
@@ -70,7 +77,9 @@ $('#app').innerHTML = `
       ${!R.pickup_enabled && R.delivery_enabled ? 'checked' : ''}
       ${R.delivery_enabled ? '' : 'disabled'}>
       <span><b>توصيل من المنشأة</b><br>
-      <span class="small muted">${R.delivery_enabled ? 'توفره المنشأة بنفسها'
+      <span class="small muted">${R.delivery_enabled
+        ? (DELIVERY_FEE > 0 ? `رسوم التوصيل ${sar(DELIVERY_FEE)} — تحددها المنشأة`
+                            : 'توفره المنشأة بنفسها بلا رسوم توصيل')
         : 'غير متاح من هذه المنشأة حالياً'}</span></span></label>
 
     ${R.pickup_enabled ? `
@@ -89,7 +98,8 @@ $('#app').innerHTML = `
     <div class="field"><label class="label">الاسم</label>
       <input class="input" id="cname" value="${esc(val('hg_name'))}" placeholder="اسمك الكامل"></div>
     <div class="row2">
-      <div class="field"><label class="label">رقم الجوال</label>
+      <div class="field"><label class="label">رقم الجوال
+        <span class="muted small" id="phoneReq">(اختياري)</span></label>
         <input class="input" id="cphone" value="${esc(val('hg_phone'))}" inputmode="tel"
           placeholder="05xxxxxxxx"></div>
       <div class="field"><label class="label">الحي</label>
@@ -99,6 +109,7 @@ $('#app').innerHTML = `
             >${esc(a.name)}</option>`).join('')}
         </select></div>
     </div>
+    <p class="hint" id="phoneHint">للاستلام من المنشأة لا نحتاج رقمك — اتركه فارغاً إن رغبت.</p>
     <div class="field" id="addrBox"><label class="label">العنوان (للتوصيل)</label>
       <input class="input" id="caddr" value="${esc(val('hg_addr'))}"
         placeholder="الحي، الشارع، أقرب معلم"></div>
@@ -108,11 +119,14 @@ $('#app').innerHTML = `
 
   <div class="card mt">
     <h3 class="section-title" style="margin-top:0;font-size:15px">3️⃣ الموافقات</h3>
-    <label class="check"><input type="checkbox" id="c1">
-      <span>أوافق على مشاركة رقم جوالي مع المنشأة للتواصل بخصوص هذا الطلب.</span></label>
+    <label class="check" id="c1Box"><input type="checkbox" id="c1">
+      <span>أوافق على مشاركة رقم جوالي مع المنشأة <b>للتواصل بخصوص هذا الطلب فقط</b>.</span></label>
+    <p class="hint" id="c1Hint">مطلوبة للتوصيل فقط — المندوب يحتاج رقمك ليصلك.</p>
     <label class="check"><input type="checkbox" id="c2">
       <span>(اختياري) أوافق على تلقي عروض وتسويق من المنشأة.</span></label>
-    <p class="hint">موافقة التسويق ليست شرطاً لاستخدام الخدمة. يُسجَّل نوع الموافقة ووقتها.
+    <p class="hint">يُسجَّل لكل موافقة: نص غرضها كما تراه الآن، ووقتها، ونسخة السياسة.
+      موافقة التسويق ليست شرطاً لاستخدام الخدمة ولا لأي طلب، ولا تُعرض عليك أي رسالة
+      تسويقية من منشأة بدونها. ويمكنك سحب أي موافقة من «حسابي» في أي وقت.
       <br><b>ملاحظة:</b> المتطلبات النظامية لحماية البيانات
       <span class="badge badge-orange">تحتاج تحققاً رسمياً</span></p>
   </div>
@@ -122,26 +136,49 @@ $('#app').innerHTML = `
     <div class="between" style="color:var(--orange-deep)">
       <span>${esc(giftText)}</span>
       <span>− ${sar(disc)}</span></div>
+    <div class="between" id="feeRow" style="color:var(--orange-deep);display:none">
+      <span>رسوم التوصيل</span><span id="feeVal">+ ${sar(DELIVERY_FEE)}</span></div>
     ${gift.gift.kind === 'free_item' ? `<div class="alert alert-info mt">
       🎁 ${esc(gift.gift.gift_label || 'الصنف المجاني')} سيُضاف للطلب تلقائياً وسعره صفر.</div>` : ''}
     <div class="between" style="font-weight:700;font-size:18px;border-top:1px solid var(--line);
       padding-top:10px;margin-top:6px">
-      <span>المطلوب دفعه</span><span>${sar(total)}</span></div>
+      <span>المطلوب دفعه</span><span id="sumTotal">${sar(total)}</span></div>
+    ${gift.gift.code ? `<div class="between small muted" style="margin-top:6px">
+      <span>كود هديتك</span><span dir="ltr">${esc(gift.gift.code)}</span></div>` : ''}
+    ${R.points_enabled && Number(R.points_per_order) > 0 ? `<div class="alert alert-info mt">
+      ⭐ عند اكتمال هذا الطلب تمنحك ${esc(R.name)} ${Number(R.points_per_order)} نقطة،
+      وتظهر في رصيدك بعد أن يؤكد الموظف التسليم بمسح باركود الطلب.</div>` : ''}
+    <p class="hint">بعد إنشاء الطلب يمكنك إرسال الفاتورة إلى واتساب المنشأة — نفس الأرقام ونفس الكود.
+      ${DELIVERY_FEE > 0 ? 'ورسوم التوصيل يضيفها السيرفر ويطلب تأكيدك لها.' : ''}</p>
     <button class="btn btn-primary btn-block btn-lg mt" id="submit">تأكيد الطلب</button>
     <p class="hint center">الدفع يتم مباشرة مع المنشأة. لا رسوم على المنصة إلا عند اكتمال الطلب.</p>
   </div>`;
 
-const otype = () => document.querySelector('input[name=otype]:checked')?.value;
 function syncFields() {
   const isPickup = otype() === 'pickup';
   $('#addrBox').style.display = isPickup ? 'none' : 'block';
   if ($('#slotBox')) $('#slotBox').style.display = isPickup ? 'block' : 'none';
+  // الجوال والموافقة على مشاركته: مطلوبان للتوصيل فقط، اختياريان للاستلام
+  $('#phoneReq').textContent = isPickup ? '(اختياري)' : '(مطلوب للتوصيل)';
+  $('#phoneHint').textContent = isPickup
+    ? 'للاستلام من المنشأة لا نحتاج رقمك — اتركه فارغاً إن رغبت.'
+    : 'المندوب يحتاج رقمك ليصلك الطلب — لن يُشارَك إلا مع هذه المنشأة ولهذا الطلب.';
+  $('#c1Hint').textContent = isPickup
+    ? 'اختيارية للاستلام — شاركه فقط إن أردت أن تتواصل معك المنشأة.'
+    : 'مطلوبة للتوصيل فقط — المندوب يحتاج رقمك ليصلك.';
+  // رسوم التوصيل تظهر فقط عند اختيار التوصيل (المعاينة؛ الحساب النهائي على السيرفر)
+  const fee = feeFor();
+  $('#feeRow').style.display = fee > 0 ? 'flex' : 'none';
+  $('#feeVal').textContent = '+ ' + sar(fee);
+  $('#sumTotal').textContent = sar(totalFor());
 }
 document.querySelectorAll('input[name=otype]').forEach(r => r.onchange = syncFields);
 syncFields();
 
 const ERRORS = {
-  consent_required: 'يجب الموافقة على مشاركة رقم الجوال للمطعم.',
+  consent_required: 'الموافقة على مشاركة رقم الجوال مطلوبة للتوصيل.',
+  phone_required: 'رقم الجوال مطلوب للتوصيل — المندوب يحتاجه ليصلك الطلب.',
+  invalid_phone: 'رقم الجوال غير صحيح — أدخله بصيغة 05xxxxxxxx.',
   gift_already_used: 'تم استخدام هذه الهدية مسبقاً.',
   empty_cart: 'السلة فارغة.',
   below_min_order: 'الطلب أقل من الحد الأدنى للمطعم.',
@@ -149,15 +186,24 @@ const ERRORS = {
   delivery_not_available: 'هذه المنشأة لا توفر توصيل.',
   pickup_not_available: 'هذه المنشأة لا توفر استلام.',
   restaurant_unavailable: 'المنشأة غير متاحة حالياً.',
-  gift_not_found: 'الهدية غير موجودة.'
+  gift_not_found: 'الهدية غير موجودة.',
+  address_required: 'أدخل عنوان التوصيل (الحي والشارع) — التوصيل يحتاج عنواناً.',
+  price_not_confirmed: 'لم يُؤكَّد السعر بعد — المنشأة لا تقبل الطلب قبل التأكيد.',
+  price_changed: 'تغيّر سعر الطلب — راجع التفاصيل وأعد التأكيد.',
+  invalid_delivery_change: 'لا يمكن تغيير طريقة الاستلام بعد بدء التنفيذ.'
 };
 
 $('#submit').onclick = async () => {
   const name = $('#cname').value.trim();
-  const phone = $('#cphone').value.trim();
+  const phone = $('#cphone').value.trim().replace(/[\s-]/g, '');
   if (!name) return toast('أدخل الاسم');
-  if (!/^05\d{8}$/.test(phone.replace(/[\s-]/g, ''))) return toast('أدخل رقم جوال صحيح يبدأ بـ 05');
-  if (!$('#c1').checked) return toast('الموافقة على مشاركة الرقم مطلوبة');
+  // الجوال اختياري للاستلام: إن كُتب فيجب أن يكون صحيحاً، وإن تُرك فارغاً فلا مشكلة
+  if (phone && !/^05\d{8}$/.test(phone))
+    return toast('أدخل رقم جوال صحيح يبدأ بـ 05 أو اتركه فارغاً');
+  if (otype() === 'delivery' && !phone)
+    return toast('رقم الجوال مطلوب للتوصيل — المندوب يحتاجه');
+  if (otype() === 'delivery' && !$('#c1').checked)
+    return toast('الموافقة على مشاركة الرقم مطلوبة للتوصيل');
   if (otype() === 'pickup' && !R.pickup_enabled) return toast('هذه المنشأة لا توفر استلام');
   if (otype() === 'delivery' && !R.delivery_enabled) return toast('هذه المنشأة لا توفر توصيل');
   if (otype() === 'delivery' && !$('#caddr').value.trim()) return toast('أدخل العنوان للتوصيل');
@@ -182,12 +228,12 @@ $('#submit').onclick = async () => {
     p_type: otype(),
     p_items: cart.map(i => ({ item_id: i.id, qty: i.qty })),
     p_name: name,
-    p_phone: phone,
+    p_phone: phone || null,
     p_area: $('#carea').value ? Number($('#carea').value) : null,
     p_address: $('#caddr').value.trim() || null,
     p_slot: otype() === 'pickup' ? slotVal : null,
     p_note: $('#cnote').value.trim() || null,
-    p_consent_order_contact: true,
+    p_consent_order_contact: $('#c1').checked,
     p_consent_marketing: $('#c2').checked
   });
 
@@ -201,9 +247,97 @@ $('#submit').onclick = async () => {
   localStorage.setItem('hg_gift', JSON.stringify({
     ...gift, gift: { ...gift.gift, redeemed: true }
   }));
-  toast('✅ تم إرسال الطلب للمطعم');
-  setTimeout(() => location.href = `order.html?code=${data.code}`, 700);
+
+  /* رسوم التوصيل يضيفها السيرفر — والعميل يؤكد الرقم الذي رآه قبل أن تقبله المنشأة */
+  if (data.awaiting_price_confirmation) {
+    toast('✅ أُنشئ الطلب — تأكيد السعر مطلوب');
+    return priceConfirmStep(data);
+  }
+
+  toast('✅ تم إرسال الطلب للمنشأة');
+  await shareStep(data.code);
 };
+
+/* العميل يؤكد السعر الذي أضاف فيه السيرفر رسوم التوصيل */
+function priceConfirmStep(created) {
+  const orderUrl = `order.html?code=${encodeURIComponent(created.code)}`;
+  modal(`
+    <h3 class="modal-title">تأكيد السعر</h3>
+    <p class="small muted">المنشأة تضيف رسوم توصيل على هذا الطلب. راجع المبلغ قبل التأكيد.</p>
+    <div style="border:1px solid var(--line);border-radius:14px;padding:12px;margin:10px 0;background:var(--cream)">
+      <div class="between small"><span>الإجمالي</span><span>${sar(created.subtotal)}</span></div>
+      <div class="between small muted"><span>الخصم</span><span>− ${sar(created.discount)}</span></div>
+      <div class="between small" style="color:var(--orange-deep)"><span>رسوم التوصيل</span>
+        <span>+ ${sar(created.delivery_fee)}</span></div>
+      <div class="between" style="font-weight:700">
+        <span>المطلوب دفعه</span><span>${sar(created.total)}</span></div>
+    </div>
+    <p class="hint">لا تقبل المنشأة الطلب قبل تأكيدك لهذا المبلغ. إن غيّرت طريقة الاستلام
+      إلى الاستلام من المنشأة تُلغى رسوم التوصيل.</p>
+    <button class="btn btn-primary btn-block btn-lg" id="price-ok">أؤكد هذا السعر</button>
+    <button class="btn btn-ghost btn-block mt" id="price-later">أراجع الطلب أولاً</button>`, {
+    onOpen: (m, close) => {
+      m.querySelector('#price-ok').onclick = async () => {
+        const { data } = await sb.rpc('customer_confirm_order_price', {
+          p_device: deviceId(), p_code: created.code, p_expected_total: Number(created.total)
+        });
+        close();
+        if (!data?.ok) {
+          toast(ERRORS[data?.error] || 'تعذّر تأكيد السعر');
+          if (data?.error === 'price_changed') location.href = orderUrl;
+          return;
+        }
+        toast('✅ تم تأكيد السعر — الطلب الآن عند المنشأة');
+        await shareStep(created.code);
+      };
+      m.querySelector('#price-later').onclick = () => { close(); location.href = orderUrl; };
+    }
+  });
+}
+
+/* الطلب أُنشئ أولاً بأرقام قاعدة البيانات، ثم نعرض قناة الإرسال */
+async function shareStep(code) {
+  const { data: share } = await sb.rpc('customer_order_share', {
+    p_device: deviceId(), p_code: code
+  });
+  const ready = !!share?.whatsapp_ready;
+  const orderUrl = `order.html?code=${encodeURIComponent(code)}`;
+
+  modal(`
+    <h3 class="modal-title">✅ تم إنشاء طلبك</h3>
+    <p class="small muted">رقم الطلب <b dir="ltr">#${esc(code)}</b> — الطلب محفوظ عند المنشأة قبل أي إرسال.</p>
+    <div style="border:1px solid var(--line);border-radius:14px;padding:12px;margin:10px 0;background:var(--cream)">
+      <div class="between small"><span>الإجمالي</span><span>${sar(share?.subtotal ?? sub)}</span></div>
+      <div class="between small muted"><span>الخصم</span><span>− ${sar(share?.discount ?? disc)}</span></div>
+      ${Number(share?.delivery_fee || 0) > 0 ? `<div class="between small" style="color:var(--orange-deep)">
+        <span>رسوم التوصيل</span><span>+ ${sar(share.delivery_fee)}</span></div>` : ''}
+      <div class="between" style="font-weight:700">
+        <span>المطلوب دفعه</span><span>${sar(share?.total ?? total)}</span></div>
+      ${share?.gift_code ? `<div class="between small muted"><span>كود الهدية</span>
+        <span dir="ltr">${esc(share.gift_code)}</span></div>` : ''}
+    </div>
+    ${ready
+      ? `<p class="hint">نص الفاتورة يأتي من المنصة — نفس الإجمالي والخصم وكود الهدية.</p>
+         <button class="btn btn-primary btn-block btn-lg" id="wa-send">أرسل الفاتورة عبر واتساب</button>`
+      : `<p class="hint">المنشأة لم تُضف رقم واتساب بعد — تابع طلبك داخل المنصة.</p>`}
+    <button class="btn btn-ghost btn-block ${ready ? 'mt' : ''}" id="go-order">متابعة داخل المنصة</button>`, {
+    onOpen: (m, close) => {
+      m.querySelector('#wa-send')?.addEventListener('click', () => {
+        openWhatsApp(share.whatsapp, share.invoice);
+        close();
+        location.href = orderUrl;
+      });
+      m.querySelector('#go-order').addEventListener('click', () => {
+        close();
+        location.href = orderUrl;
+      });
+    }
+  });
+
+  /* إغلاق النافذة (الضغط خارجها) ينقل لمتابعة الطلب بدل البقاء على سلة فارغة */
+  const bg = document.querySelector('.modal-bg:last-child');
+  bg?.addEventListener('click', e => { if (e.target === bg) location.href = orderUrl; });
+}
 initPWA();
 </script>
 </body>

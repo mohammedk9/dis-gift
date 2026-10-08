@@ -65,7 +65,11 @@ $('#app').innerHTML = `
         <span class="badge">${r.completed} مكتمل</span>
         <span class="badge badge-orange">رسوم: ${sar(r.fees)}</span>
         ${r.pickup_enabled ? '<span class="badge badge-green">استلام</span>' : ''}
-        ${r.delivery_enabled ? '<span class="badge badge-blue">توصيل المنشأة</span>' : ''}
+        ${r.delivery_enabled ? `<span class="badge badge-blue">توصيل${
+          Number(r.delivery_fee) > 0 ? ' · ' + sar(r.delivery_fee) : ' · بلا رسوم'}</span>` : ''}
+        ${r.whatsapp && r.whatsapp_orders_enabled
+          ? `<span class="badge badge-green" dir="ltr">💬 0${esc(r.whatsapp.slice(3))}</span>`
+          : '<span class="badge">بدون واتساب</span>'}
       </div>
 
       <div class="flex mt" style="gap:8px">

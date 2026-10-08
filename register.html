@@ -1,0 +1,278 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>تسجيل حساب | هدية</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Arabic:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="assets/css/app.css">
+<meta name="theme-color" content="#e86a33">
+<link rel="icon" href="assets/icon.svg" type="image/svg+xml">
+<style>
+  /* ===== الهوية البرتقالية (متوافقة مع صفحة الدخول) ===== */
+  :root{
+    --orange:#e86a33; --orange-deep:#d9531a; --orange-text:#b94110; --orange-light:#f7a05f;
+    --peach:#fdeee3; --peach-2:#fbe0cd; --cream:#fff8f1;
+    --grad:linear-gradient(135deg,#f7a05f 0%,#ee6f33 48%,#d9531a 100%);
+    --shadow-or:0 18px 38px -16px rgba(226,85,31,.55);
+  }
+  body{background:linear-gradient(180deg,var(--cream) 0,#fff 420px) no-repeat,#fff}
+  .reg-hero{padding-top:8px;text-align:center}
+  .lh-mark{width:68px;height:68px;margin:0 auto 14px;border-radius:22px;background:var(--grad);color:#fff;
+    display:grid;place-items:center;box-shadow:var(--shadow-or),0 0 0 6px rgba(255,255,255,.8)}
+  .switch{display:flex;gap:6px;background:#f6efe7;padding:5px;border-radius:18px;margin:0 0 16px}
+  .switch button{flex:1;display:inline-flex;align-items:center;justify-content:center;gap:8px;border:0;cursor:pointer;
+    background:transparent;color:#6f655c;border-radius:14px;padding:12px 10px;
+    font:inherit;font-size:14.5px;font-weight:600;transition:.2s}
+  .switch button.active{background:var(--grad);color:#fff;box-shadow:0 10px 22px -12px rgba(226,85,31,.8)}
+  #customerPanel,#businessPanel{border-radius:26px;border:1px solid #f1e7da;background:#fff;padding:22px;
+    box-shadow:0 1px 2px rgba(26,19,14,.04),0 14px 36px -20px rgba(26,19,14,.18)}
+  .title-row{display:flex;align-items:center;gap:10px}
+  .title-ico{width:38px;height:38px;border-radius:12px;background:var(--peach);color:var(--orange-deep);
+    display:grid;place-items:center;flex:none;border:1px solid var(--peach-2)}
+  .wa-preview{margin-top:6px}
+  .foot-link{text-align:center;margin:18px 0 30px;font-size:13.5px;color:#6f655c}
+  .foot-link a{color:var(--orange-text);font-weight:600;text-decoration:none}
+  a:focus-visible,button:focus-visible{outline:2px solid var(--orange);outline-offset:3px;border-radius:10px}
+  @media (prefers-reduced-motion:reduce){*,*::before,*::after{animation:none !important;transition:none !important}}
+</style>
+</head>
+<body>
+<header class="nav"><div class="container nav-inner">
+  <a class="brand" href="index.html">
+    <span class="brand-mark">🎁</span>
+    <span><span class="brand-name">هدية</span><br><span class="brand-sub">تسجيل حساب جديد</span></span>
+  </a>
+  <span class="nav-spacer"></span>
+  <a class="btn btn-ghost btn-sm" href="login.html">لديك حساب؟ دخول</a>
+</div></header>
+
+<main class="container page" style="max-width:560px" id="app"></main>
+<script src="assets/js/runtime-config-live.js"></script>
+<script src="assets/js/vendor/supabase.js"></script>
+<script type="module">
+import { sb } from './assets/js/core.js';
+import { $, esc, toast, requireConfig, initPWA } from './assets/js/ui.js';
+import { customerSignUp, businessSignUp, destinationFor, finishPendingRegistration, safeNext }
+  from './assets/js/auth-flows.js';
+import { localNormalizeWhatsapp, whatsappDisplay } from './assets/js/whatsapp.js';
+
+if (!requireConfig()) throw new Error('not configured');
+
+/* رموز الأخطاء التي تُعيدها قاعدة البيانات — كل رمز له رسالة مفهومة */
+const ERR = {
+  invalid_whatsapp: 'رقم الواتساب غير صحيح — أدخله بصيغة 05xxxxxxxx',
+  already_registered: 'هذا الحساب مرتبط بمنشأة مسجّلة بالفعل — افتح لوحة منشأتك.',
+  auth_required: 'انتهت الجلسة. سجّل الدخول ثم أعد المحاولة.',
+  no_restaurant: 'لا توجد منشأة مرتبطة بهذا الحساب.'
+};
+
+const params = new URLSearchParams(location.search);
+const next = safeNext(params.get('next'));
+const join = params.get('join') === '1';
+const signup = params.get('signup') === '1';
+const requested = params.get('type');
+let mode = requested === 'business' || requested === 'customer'
+  ? requested
+  : (join || /\/r\//.test(next) ? 'business' : signup ? 'customer' : 'customer');
+
+$('#app').innerHTML = `
+  <div class="reg-hero">
+    <div class="lh-mark">🎁</div>
+    <h1 class="page-title">أنشئ حسابك</h1>
+    <p class="page-sub">التسجيل مجاني — ولا رسوم على المنشأة إلا عند اكتمال الطلب.</p>
+  </div>
+
+  <div class="switch" role="tablist" aria-label="نوع الحساب">
+    <button type="button" id="tabCustomer" role="tab">👤 مستخدم</button>
+    <button type="button" id="tabBusiness" role="tab">🏪 منشأة</button>
+  </div>
+
+  <section id="customerPanel" role="tabpanel">
+    <h2 class="modal-title title-row"><span class="title-ico">👤</span> حساب مستخدم</h2>
+    <form id="customerForm">
+      <div class="field"><label class="label" for="c_name">الاسم</label>
+        <input class="input" id="c_name" autocomplete="name"></div>
+      <div class="field"><label class="label" for="c_email">البريد الإلكتروني</label>
+        <input class="input" id="c_email" type="email" inputmode="email" autocomplete="email"></div>
+      <div class="field"><label class="label" for="c_pass">كلمة المرور</label>
+        <input class="input" id="c_pass" type="password" autocomplete="new-password">
+        <p class="hint">6 أحرف على الأقل.</p></div>
+      <button class="btn btn-primary btn-lg btn-block" id="c_go" type="submit">إنشاء الحساب</button>
+      <p class="hint mt">يمكنك التصفح وفتح هدية اليوم دون تسجيل الدخول أيضاً.</p>
+    </form>
+  </section>
+
+  <section id="businessPanel" role="tabpanel" hidden>
+    <h2 class="modal-title title-row"><span class="title-ico">🏪</span> تسجيل منشأة</h2>
+    <form id="businessForm">
+      <div class="field"><label class="label" for="r_biz">نوع النشاط</label>
+        <select class="input" id="r_biz">
+          <option value="restaurant">مطعم</option>
+          <option value="cafe">كافيه</option>
+          <option value="salon">صالون</option>
+          <option value="store">متجر</option>
+          <option value="services">خدمات</option>
+          <option value="other">أخرى</option>
+        </select>
+        <p class="hint">المنصة لأي منشأة محلية في بريدة، لا للمطاعم فقط.</p>
+      </div>
+      <div class="field"><label class="label" for="r_name">اسم المنشأة</label>
+        <input class="input" id="r_name"></div>
+      <div class="field"><label class="label" for="r_email">البريد الإلكتروني</label>
+        <input class="input" id="r_email" type="email" inputmode="email" autocomplete="email"></div>
+      <div class="field"><label class="label" for="r_pass">كلمة المرور</label>
+        <input class="input" id="r_pass" type="password" autocomplete="new-password">
+        <p class="hint">6 أحرف على الأقل.</p></div>
+      <div class="field"><label class="label" for="r_phone">رقم الجوال</label>
+        <input class="input" id="r_phone" inputmode="tel" placeholder="05xxxxxxxx"></div>
+      <div class="field"><label class="label" for="r_whatsapp">رقم واتساب المنشأة (اختياري)</label>
+        <input class="input" id="r_whatsapp" inputmode="tel" placeholder="05xxxxxxxx">
+        <p class="hint" id="wa-preview">يصل عليه العميل فاتورة طلبه — كود الهدية والخصم والإجمالي.</p></div>
+      <div class="field"><label class="label" for="r_addr">العنوان</label>
+        <input class="input" id="r_addr" placeholder="الحي، الشارع"></div>
+      <div class="field"><label class="label" for="r_area">الحي</label>
+        <select class="input" id="r_area"><option value="">— اختر —</option></select></div>
+      <label class="check"><input type="checkbox" id="r_pickup" checked> استلام متاح</label>
+      <label class="check"><input type="checkbox" id="r_delivery"> توصيل من المنشأة</label>
+      <button class="btn btn-primary btn-lg btn-block mt" id="r_go" type="submit">إنشاء حساب المنشأة</button>
+      <p class="hint mt">المنشأة تبدأ بحالة «بانتظار التفعيل» حتى يفعّلها الإدارة.</p>
+    </form>
+  </section>
+
+  <p class="foot-link">
+    <a href="gift.html">تصفّح هدية اليوم</a> ·
+    <a href="login.html">تسجيل الدخول</a>
+  </p>`;
+
+const { data: areas } = await sb.rpc('active_areas');
+$('#r_area').innerHTML = '<option value="">— اختر —</option>' +
+  (areas || []).map(a => `<option value="${a.id}">${esc(a.name)}</option>`).join('');
+
+function setMode(value) {
+  mode = value;
+  $('#tabCustomer').classList.toggle('active', mode === 'customer');
+  $('#tabBusiness').classList.toggle('active', mode === 'business');
+  $('#tabCustomer').setAttribute('aria-selected', String(mode === 'customer'));
+  $('#tabBusiness').setAttribute('aria-selected', String(mode === 'business'));
+  $('#customerPanel').hidden = mode !== 'customer';
+  $('#businessPanel').hidden = mode !== 'business';
+}
+$('#tabCustomer').onclick = () => setMode('customer');
+$('#tabBusiness').onclick = () => setMode('business');
+setMode(mode);
+
+/* معاينة فورية للرقم — التطبيع المعتمد يبقى على السيرفر */
+$('#r_whatsapp').addEventListener('input', () => {
+  const raw = $('#r_whatsapp').value.trim();
+  const box = $('#wa-preview');
+  if (!raw) {
+    box.textContent = 'يصل عليه العميل فاتورة طلبه — كود الهدية والخصم والإجمالي.';
+    box.style.color = '';
+    return;
+  }
+  const norm = localNormalizeWhatsapp(raw);
+  box.style.color = norm ? '' : '#c0392b';
+  box.textContent = norm
+    ? 'سيُحفظ الرقم: ' + whatsappDisplay(raw)
+    : 'رقم غير صحيح — أدخله بصيغة 05xxxxxxxx أو 9665xxxxxxxx';
+});
+
+function doneScreen(isCustomer) {
+  $('#app').innerHTML = `
+    <div class="card center" style="margin-top:18px">
+      <div style="font-size:44px">📧</div>
+      <h2 class="page-title" style="margin:10px 0 6px">
+        ${isCustomer ? 'تم إنشاء حسابك' : 'تم إنشاء حساب المنشأة'}</h2>
+      <p class="small muted">${isCustomer
+        ? 'أرسلنا رابط التأكيد إلى بريدك الإلكتروني. أكّد البريد ثم سجّل الدخول.'
+        : 'أرسلنا رابط التأكيد إلى بريدك. بعد التأكيد تُنشأ منشأتك تلقائياً عند أول دخول.'}</p>
+      <a class="btn btn-primary btn-block mt"
+        href="login.html${isCustomer ? '?mode=customer' : '?mode=business'}">الذهاب إلى صفحة الدخول</a>
+      <p class="hint mt">لم يصل البريد؟ تحقّق من مجلد الرسائل غير المرغوبة.</p>
+    </div>`;
+}
+
+$('#customerForm').onsubmit = async event => {
+  event.preventDefault();
+  const name = $('#c_name').value.trim();
+  const email = $('#c_email').value.trim();
+  const password = $('#c_pass').value;
+  if (!name || !email || password.length < 6)
+    return toast('أكمل الاسم والبريد وكلمة مرور من 6 أحرف على الأقل');
+
+  const btn = $('#c_go');
+  btn.disabled = true; btn.innerHTML = '<span class="spin"></span>';
+  const res = await customerSignUp({ name, email, password });
+  if (res.error) {
+    btn.disabled = false; btn.textContent = 'إنشاء الحساب';
+    return toast(ERR[res.error] || res.error);
+  }
+  if (!res.session) return doneScreen(true);
+
+  const destination = await destinationFor('customer', next);
+  if (!destination) {
+    btn.disabled = false; btn.textContent = 'إنشاء الحساب';
+    return toast('تعذّر التحقق من صلاحية الحساب');
+  }
+  toast('✅ تم إنشاء الحساب');
+  location.replace(destination);
+};
+
+$('#businessForm').onsubmit = async event => {
+  event.preventDefault();
+  const rawWa = $('#r_whatsapp').value.trim();
+  const wa = rawWa ? localNormalizeWhatsapp(rawWa) : null;
+  if (rawWa && !wa) return toast(ERR.invalid_whatsapp);
+
+  const payload = {
+    name: $('#r_name').value.trim(),
+    biz: $('#r_biz').value,
+    phone: $('#r_phone').value.trim(),
+    addr: $('#r_addr').value.trim(),
+    area: $('#r_area').value,
+    pickup: $('#r_pickup').checked,
+    delivery: $('#r_delivery').checked,
+    whatsapp: wa
+  };
+  const email = $('#r_email').value.trim();
+  const password = $('#r_pass').value;
+  if (!payload.name || !email || password.length < 6)
+    return toast('أكمل البيانات — كلمة المرور 6 أحرف على الأقل');
+  if (!payload.phone) return toast('أدخل رقم الجوال');
+
+  const btn = $('#r_go');
+  btn.disabled = true; btn.innerHTML = '<span class="spin"></span>';
+  const res = await businessSignUp({
+    name: payload.name, email, password, phone: payload.phone, payload
+  });
+  if (res.error) {
+    btn.disabled = false; btn.textContent = 'إنشاء حساب المنشأة';
+    return toast(ERR[res.error] || res.error);
+  }
+  if (!res.session) return doneScreen(false);
+
+  const destination = await destinationFor('business', next);
+  if (!destination) {
+    btn.disabled = false; btn.textContent = 'إنشاء حساب المنشأة';
+    return toast('تعذّر التحقق من صلاحية الحساب');
+  }
+  toast('✅ تم التسجيل — بانتظار تفعيل الإدارة');
+  location.replace(destination);
+};
+
+/* تسجيل منشأة كان بانتظار تأكيد البريد — يُكمل عند وجود جلسة */
+const { data: { session } } = await sb.auth.getSession();
+if (session) {
+  const pending = await finishPendingRegistration();
+  if (pending.handled && pending.redirect) {
+    toast(pending.message);
+    setTimeout(() => location.replace(pending.redirect), 900);
+  }
+}
+initPWA();
+</script>
+</body>
+</html>

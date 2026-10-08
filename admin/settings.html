@@ -91,6 +91,29 @@ $('#app').innerHTML = `
   </div>
 
   <div class="card mt">
+    <div style="font-weight:700">🛵 رسوم التوصيل</div>
+    <div class="field"><label class="label">الحد الأعلى لرسوم التوصيل (ر.س)</label>
+      <input class="input" id="s_delivery_fee_max" inputmode="decimal"
+        value="${esc(raw('delivery_fee_max'))}"></div>
+    <p class="hint">${esc(desc.delivery_fee_max || '')}<br>
+      كل منشأة تحدد رسوم توصيلها بنفسها داخل هذا الحد، والسيرفر يمنع تجاوزه.
+      الرسوم تُحصَّل للمنشأة كاملة ولا تدخل في رسوم المنصة.
+      حذف القيمة يصفّر الحد (لا رسوم توصيل).</p>
+  </div>
+
+  <div class="card mt">
+    <div style="font-weight:700">⭐ النقاط</div>
+    <div class="field"><label class="label">الحد الأعلى المطلق للنقاط على طلب واحد</label>
+      <input class="input" id="s_points_hard_cap" inputmode="numeric"
+        value="${esc(raw('points_hard_cap'))}"></div>
+    <p class="hint">${esc(desc.points_hard_cap || '')}<br>
+      كل منشأة تحدد نقاطها بنفسها داخل هذا الحد، والسيرفر يمنع تجاوزه.
+      النقاط استحقاق وعرض فقط في هذه المرحلة: لا استبدال ولا خصم ولا رصيد مالي،
+      ولا تدخل في دفتر حسابات المنشأة ولا في رسوم المنصة.
+      حذف القيمة يصفّر الحد (لا نقاط تُمنح).</p>
+  </div>
+
+  <div class="card mt">
     <div style="font-weight:700">⏱️ الطلبات والمدينة</div>
     <div class="field"><label class="label">مهلة الطلب (دقيقة)</label>
       <input class="input" id="s_order_timeout_minutes" inputmode="numeric"
@@ -149,6 +172,8 @@ async function saveAll() {
   await num('#s_campaign_discount_max', 'campaign_discount_max');
   await num('#s_campaign_daily_limit_max', 'campaign_daily_limit_max');
   await num('#s_order_timeout_minutes', 'order_timeout_minutes');
+  await num('#s_delivery_fee_max', 'delivery_fee_max');
+  await num('#s_points_hard_cap', 'points_hard_cap');
   await str('#s_city', 'city');
   await str('#s_policy_version', 'policy_version');
   await sb.rpc('admin_set_setting',

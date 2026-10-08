@@ -42,6 +42,8 @@ const { data: d } = await sb.rpc('admin_kpis', { p_days: days });
 if (!d?.ok) { $('#app').innerHTML = '<div class="empty">تعذّر تحميل المؤشرات</div>'; throw 0; }
 
 const ns = d.north_star, f = d.funnel, c = d.customer, r = d.restaurant, e = d.economics;
+const dv = d.delivery || {};
+const pt = d.points || {};
 
 $('#app').innerHTML = `
   <div class="page-head">
@@ -96,6 +98,39 @@ $('#app').innerHTML = `
     <div class="stat"><div class="stat-k">مطعم عائد</div><div class="stat-v">${r.returning}</div></div>
   </div>
   <p class="hint">«مطعم عائد» = أتمّ أكثر من طلب مكتمل واحد خلال الفترة.</p>
+
+  <h2 class="section-title">التوصيل</h2>
+  <div class="stats">
+    <div class="stat"><div class="stat-k">طلبات توصيل</div><div class="stat-v">${dv.orders ?? 0}</div></div>
+    <div class="stat"><div class="stat-k">مكتملة</div><div class="stat-v">${dv.completed ?? 0}</div></div>
+    <div class="stat"><div class="stat-k">متوسط الرسوم</div>
+      <div class="stat-v">${sar(dv.avg_fee ?? 0)}</div></div>
+    <div class="stat"><div class="stat-k">منشآت تقدم التوصيل</div>
+      <div class="stat-v">${dv.restaurants_offering ?? 0}</div></div>
+    <div class="stat"><div class="stat-k">بانتظار تأكيد السعر</div>
+      <div class="stat-v">${dv.awaiting_confirmation ?? 0}</div></div>
+  </div>
+  <p class="hint">رسوم التوصيل تُحصَّل للمنشأة كاملة ولا تدخل في إيراد المنصة —
+    إجمالي ما حصّلته المنشآت خلال الفترة: ${sar(dv.fees_collected_by_merchants ?? 0)}.
+    «بانتظار تأكيد السعر» عدّاد عام (لا يتبع الفترة) لأن الطلب غير المؤكد يمنع القبول فوراً.</p>
+
+  <h2 class="section-title">النقاط</h2>
+  <div class="stats">
+    <div class="stat"><div class="stat-k">منشآت تُفعّل النقاط</div>
+      <div class="stat-v">${pt.restaurants_enabled ?? 0}</div></div>
+    <div class="stat"><div class="stat-k">نقاط معتمدة (الفترة)</div>
+      <div class="stat-v">${pt.granted ?? 0}</div></div>
+    <div class="stat"><div class="stat-k">طلبات مُنحت نقاطاً</div>
+      <div class="stat-v">${pt.orders_with_points ?? 0}</div></div>
+    <div class="stat"><div class="stat-k">نقاط معلَّقة</div>
+      <div class="stat-v">${pt.pending ?? 0}</div></div>
+    <div class="stat"><div class="stat-k">نقاط ملغاة (طلب ملغي)</div>
+      <div class="stat-v">${pt.cancelled ?? 0}</div></div>
+    <div class="stat"><div class="stat-k">عملاء لديهم نقاط</div>
+      <div class="stat-v">${pt.customers ?? 0}</div></div>
+  </div>
+  <p class="hint">النقاط استحقاق وعرض فقط في هذه المرحلة — ${esc(pt.redemption || '')}
+    ولا تدخل في دفتر حسابات المنشأة ولا في إيراد المنصة.</p>
 
   <h2 class="section-title">الاقتصاديات</h2>
   <div class="card">

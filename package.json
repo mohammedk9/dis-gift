@@ -6,10 +6,14 @@
   "scripts": {
     "start": "serve . -l 3000",
     "dev": "serve . -l 3000",
-    "check": "node tools/check-sql-syntax.cjs && node tools/check-invariants.cjs && node tools/check-errors.cjs",
+    "check": "node tools/check-sql-syntax.cjs && node tools/check-pg-parse.cjs && node tools/check-invariants.cjs && node tools/check-errors.cjs && node tools/check-modules.cjs",
     "check:sql": "node tools/check-sql-syntax.cjs",
+    "check:pg": "node tools/check-pg-parse.cjs",
     "check:invariants": "node tools/check-invariants.cjs",
-    "check:errors": "node tools/check-errors.cjs"
+    "check:errors": "node tools/check-errors.cjs",
+    "check:modules": "node tools/check-modules.cjs",
+    "smoke": "node tools/smoke.cjs",
+    "db:migrate": "node tools/apply-migration.cjs"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.117.2",

@@ -11,7 +11,22 @@ const seg = (a, b) => sql.slice(sql.indexOf(a), b ? sql.indexOf(b) : undefined);
 let pass = 0, fail = 0;
 const t = (label, cond) => { cond ? pass++ : fail++; console.log((cond ? 'PASS  ' : 'FAIL  ') + label); };
 
-const og = seg('function public.open_daily_gift', 'function public.save_consent');
+/* ---------- آخر تعريف يفوز ----------
+   بعض الدوال تُعاد تعريفها في هجرات أحدث (0007 ثم 0008…)، والفحص يجب أن
+   يقرأ النسخة الفعلية لا النسخة القديمة من 0003. */
+const LATER = ['0007_whatsapp', '0008_delivery', '0009_consents', '0010_loyalty']
+  .map(n => fs.readFileSync('supabase/migrations/' + n + '.sql', 'utf8')).join('\n');
+const ALL = sql + '\n' + LATER;
+const fnBody = name => {
+  const re = new RegExp('create or replace function public\\.' + name + '\\s*\\(', 'g');
+  let m, start = -1;
+  while ((m = re.exec(ALL))) start = m.index;
+  if (start < 0) return '';
+  const end = ALL.indexOf('$$;', start);
+  return ALL.slice(start, end < 0 ? ALL.length : end);
+};
+
+const og = fnBody('open_daily_gift');
 t('one gift per device per day (UNIQUE constraint)', /unique \(device_id, gift_date\)/.test(schema));
 t('re-opening returns the SAME gift (no re-roll)', /gift_payload\(new_gift\)/.test(og));
 t('race condition handled (unique_violation)', /exception when unique_violation/.test(og));
@@ -34,8 +49,12 @@ t('open_daily_gift handles free_item', /if picked\.kind = 'free_item' then/.test
 t('open_daily_gift caps percent at 100', /picked\.kind = 'percent' and v_disc > 100/.test(og));
 t('open_daily_gift stores kind + item on the gift', /gift_kind[\s\S]*?discount_value, gift_item_id, gift_label/.test(og));
 
-const co = seg('function public.create_order', 'function public.transition_order');
-t('order_contact consent REQUIRED', /if not p_consent_order_contact then[\s\S]*?consent_required/.test(co));
+const co = fnBody('create_order');
+t('order_contact consent is required for DELIVERY only',
+  /p_type = 'delivery' and not v_shared then[\s\S]*?consent_required/.test(co));
+t('pickup never requires the customer phone',
+  !/if p_type = 'pickup' and v_phone is null/.test(co) &&
+  !/if p_type = 'pickup' and not v_shared/.test(co));
 t('marketing consent is optional', /if p_consent_marketing then/.test(co));
 t('rejects already-used gift', /gift_already_used/.test(co));
 t('enforces pickup slot', /pickup_slot_required/.test(co));
@@ -54,16 +73,17 @@ t('create_order auto-adds the free item at zero price',
 t('free item discount cannot exceed the cart', /greatest\(v_disc, 0\)/.test(co) ||
   /least\(g\.discount_value, v_sub\)/.test(co));
 
-const tr = seg('function public.transition_order', 'function public.customer_order');
+const tr = fnBody('transition_order');
 const feeIdx = tr.indexOf("if p_to = 'completed' then");
 const ledIdx = tr.indexOf('insert into public.restaurant_ledger');
 t('fee block is inside COMPLETED branch only', feeIdx > -1 && ledIdx > feeIdx);
 t('ledger insert idempotent (ON CONFLICT DO NOTHING)', /on conflict \(order_id, entry_type\) do nothing/.test(tr));
 t('fee snapshotted onto the order', /update public\.orders set platform_fee = v_fee/.test(tr));
-t('fee never exceeds order total', /least\(v_fee, ord\.order_total\)/.test(tr));
+t('fee never exceeds the non-delivery part of the order', /least\(v_fee, v_base\)/.test(tr));
 t('illegal state jumps blocked', /invalid_transition/.test(tr));
 t('restaurant cannot act on another restaurant', /is_staff_of\(ord\.restaurant_id\)/.test(tr));
-t('net = total - discount - fee', /ord\.order_total - ord\.discount_amount - v_fee/.test(tr));
+t('net = order_total - platform_fee (discount is not subtracted twice)',
+  /round\(ord\.order_total - v_fee, 2\)/.test(tr));
 t('statement upserted on completion', /on conflict \(restaurant_id, statement_period\) do update set/.test(tr));
 
 t('RLS enabled on orders', /alter table public\.orders enable row level security/.test(rls));
@@ -79,8 +99,224 @@ const seed = fs.readFileSync(SEED, 'utf8');
 t('platform_fee defaults to 0 (no invented value)', /'platform_fee', '0'::jsonb/.test(seed));
 t('seed declares its assumptions', /ASSUMPTION/.test(seed));
 
+// ---- WhatsApp: قناة توصيل للفاتورة، وليست مساراً يتجاوز النظام ----
+const WA = fs.readFileSync('supabase/migrations/0007_whatsapp.sql', 'utf8');
+t('restaurants.whatsapp column added',
+  /alter table public\.restaurants add column if not exists whatsapp text/.test(WA));
+t('whatsapp stored normalised (9665xxxxxxxx)', /\^9665\[0-9\]\{8\}\$/.test(WA));
+t('normalisation lives on the server', /create or replace function public\.normalize_whatsapp/.test(WA));
+t('normalise returns 966 + local 5xxxxxxxx', /return '966' \|\| v_digits/.test(WA));
+t('invalid whatsapp is rejected (not silently dropped)', /invalid_whatsapp/.test(WA));
+t('daily gift has a unique short code',
+  /daily_gifts_code_key unique \(code\)/.test(WA) && /alter column code set not null/.test(WA));
+t('legacy gift codes backfilled with retry (migration cannot fail on collision)',
+  /select array_agg\(id\) into v_ids from public\.daily_gifts where code is null/.test(WA) &&
+  /exception when unique_violation then/.test(WA));
+t('gift code is exposed to the customer', /'code', g\.code/.test(WA));
+t('invoice text is built server-side', /function public\.order_invoice_text/.test(WA));
+t('invoice shows total, discount and gift code',
+  /المطلوب دفعه/.test(WA) && /كود الهدية/.test(WA));
+t('invoice numbers come from the order row (server truth)',
+  /round\(o\.subtotal, 2\)/.test(WA) && /round\(o\.order_total, 2\)/.test(WA));
+t('customer share is scoped to the device', /code = upper\(p_code\) and device_id = p_device/.test(WA));
+t('staff share is scoped to the restaurant', /is_staff_of\(o\.restaurant_id\)/.test(WA));
+t('whatsapp path never creates an order', !/insert into public\.orders/.test(WA));
+// 0007 يقرأ الرسوم في admin_list_restaurants فقط (نسخة موسّعة) — ولا يكتبها أبداً.
+t('whatsapp path never writes platform fees',
+  !/set platform_fee/.test(WA) && !/insert into public\.restaurant_ledger/.test(WA));
+t('0007 does not redefine create_order', !/function public\.create_order/.test(WA));
+t('restaurant can disable whatsapp ordering', /whatsapp_orders_enabled/.test(WA));
+t('internal invoice builder is not exposed to the API',
+  /revoke execute on function public\.order_invoice_text/.test(WA));
+t('gift-code generator is not exposed to the API',
+  /revoke execute on function public\.new_gift_code/.test(WA));
+
+// ---- التوصيل: رسوم يحددها كل منشأة ويحسبها السيرفر وحده ----
+const D8 = fs.readFileSync('supabase/migrations/0008_delivery.sql', 'utf8');
+const co8 = fnBody('create_order');
+const tr8 = fnBody('transition_order');
+const sod = fnBody('set_order_delivery');
+const ccp = fnBody('customer_confirm_order_price');
+
+t('restaurants.delivery_fee column added',
+  /alter table public\.restaurants add column if not exists delivery_fee numeric/.test(D8));
+t('delivery fee cannot be negative (DB constraint)',
+  /restaurants_delivery_fee_nonneg/.test(D8) && /check \(delivery_fee >= 0\)/.test(D8));
+t('orders carry delivery_fee + price confirmation columns',
+  /add column if not exists delivery_fee numeric/.test(D8) &&
+  /add column if not exists price_confirmed_at/.test(D8) &&
+  /add column if not exists price_confirmed_total/.test(D8));
+t('ledger records the delivery fee separately',
+  /alter table public\.restaurant_ledger add column if not exists delivery_fee numeric/.test(D8));
+t('delivery fee is never accepted from the client (no p_delivery_fee)',
+  !/p_delivery_fee/.test(D8));
+t('delivery fee comes from the restaurant row',
+  /public\.delivery_fee_for\(r\.id\)/.test(co8));
+t('order_total = subtotal - discount + delivery_fee',
+  /round\(v_sub - v_disc \+ v_fee, 2\)/.test(co8));
+t('delivery without an address is rejected', /address_required/.test(co8));
+t('platform fee base excludes the delivery fee',
+  /ord\.order_total - ord\.delivery_fee/.test(tr8));
+t('restaurant keeps the whole delivery fee (net = total - fee)',
+  /round\(ord\.order_total - v_fee, 2\)/.test(tr8));
+t('fee is written once, inside the COMPLETED branch only',
+  (tr8.match(/set platform_fee/g) || []).length === 1 &&
+  tr8.indexOf("if p_to = 'completed' then") < tr8.indexOf('set platform_fee'));
+t('order cannot be accepted before the customer confirms the price',
+  /price_not_confirmed/.test(tr8));
+t('confirmation is bound to the exact total the customer saw',
+  /price_changed/.test(ccp) && /p_expected_total/.test(ccp));
+t('any price change resets the confirmation',
+  /price_confirmed_at = case when v_confirm then null else now\(\) end/.test(sod));
+t('delivery cannot change after the restaurant started',
+  /invalid_delivery_change/.test(sod));
+t('switching to delivery clears the stale pickup slot',
+  /else null end,   -- التوصيل بلا وقت استلام/.test(sod));
+t('orders from before this migration are marked as price-confirmed',
+  /where price_confirmed_at is null;/.test(D8));
+t('the backfill runs once only (re-running cannot auto-confirm new orders)',
+  /if not exists \(select 1 from public\.app_settings where key = 'delivery_backfill_at'\)/.test(D8));
+t('delivery fee is capped by the admin setting',
+  /delivery_fee_cap/.test(D8) && /delivery_fee_max/.test(D8));
+t('cap is enforced on every write path (trigger)',
+  /guard_delivery_fee/.test(D8) && /before insert or update on public\.restaurants/.test(D8));
+t('merchant cannot set a fee above the cap (explicit error)',
+  /delivery_fee_cap', 'cap'/.test(D8));
+t('platform revenue stays platform_fee only',
+  /'revenue', \(select coalesce\(sum\(platform_fee\),0\)/.test(D8) &&
+  /'fees_collected_by_merchants'/.test(D8));
+t('invoice prints the delivery fee line', /رسوم التوصيل/.test(D8));
+t('internal fee helpers are not exposed to the API',
+  /revoke execute on function public\.delivery_fee_for/.test(D8) &&
+  /revoke execute on function public\.delivery_fee_cap/.test(D8));
+t('new delivery default declares its assumption', /ASSUMPTION/.test(D8));
+
+// ---- الموافقة المقيَّدة بالغرض: الجوال شرط للتوصيل فقط ----
+const D9 = fs.readFileSync('supabase/migrations/0009_consents.sql', 'utf8');
+const co9 = fnBody('create_order');
+const sod9 = fnBody('set_order_delivery');
+const ma9 = fnBody('restaurant_marketing_audience');
+const ad9 = fnBody('customer_ad');
+const cc9 = fnBody('customer_consents');
+
+t('consents carry the purpose text, its source, its time and the order',
+  /alter table public\.consents add column if not exists purpose text/.test(D9) &&
+  /add column if not exists source text/.test(D9) &&
+  /add column if not exists withdrawn_at timestamptz/.test(D9) &&
+  /add column if not exists order_id uuid/.test(D9));
+t('the exact purpose text shown is the text stored',
+  /public\.consent_purpose\('order_contact', r\.id\), 'order', v_order/.test(co9) &&
+  /function public\.consent_purpose/.test(D9));
+t('purpose wording is editable from app_settings (no hardcoded copy in code)',
+  /'consent_purpose_order_contact'/.test(D9) && /'consent_purpose_marketing'/.test(D9));
+t('policy version is stored with every consent row',
+  /purpose, source, order_id, withdrawn_at\)/.test(D9) &&
+  /coalesce\(public\.cfg\('policy_version'\) #>> '\{\}','v1-unverified'\)/.test(co9));
+t('a consent decision is never rewritten (new row, no status update, no delete)',
+  !/set\s+consent_status/.test(D9) && !/delete from public\.consents/.test(D9));
+t('a decline is recorded explicitly as revoked (not inferred from a missing row)',
+  /else 'revoked'::public\.consent_status end/.test(co9) &&
+  /case when v_shared then null else now\(\) end/.test(co9));
+t('the active consent is the newest row for that purpose',
+  /order by c\.created_at desc, c\.id desc/.test(D9) &&
+  /'active', \(c\.consent_status = 'granted'\)/.test(cc9));
+t('the customer sees active consents and the full history separately',
+  /'consents', v_active, 'history', v_history/.test(cc9));
+
+t('delivery is rejected without a phone number', /phone_required/.test(co9) &&
+  /orders_delivery_phone_required/.test(D9));
+t('delivery is rejected without an explicit share consent', /consent_required/.test(co9));
+t('switching to delivery re-checks phone + consent on the server',
+  /if not o\.phone_shared then[\s\S]*?consent_required/.test(sod9) &&
+  /coalesce\(trim\(o\.customer_phone\), ''\) = ''/.test(sod9));
+t('phone sharing can be changed by the device owner only',
+  /code = upper\(p_code\) and device_id = p_device for update/.test(fnBody('set_order_phone')));
+t('phone sharing is a state on the order, not just a log row',
+  /add column if not exists phone_shared boolean/.test(D9) &&
+  /'phone_shared', o\.phone_shared/.test(fnBody('restaurant_orders')));
+t('the restaurant only ever sees a masked number without consent',
+  /else public\.mask_phone\(o\.customer_phone\) end/.test(fnBody('restaurant_orders')) &&
+  /function public\.mask_phone/.test(D9));
+t('the invoice never prints the phone without consent',
+  /case when o\.phone_shared then o\.customer_phone/.test(fnBody('order_invoice_text')) &&
+  /'غير مُشارَك'/.test(fnBody('order_invoice_text')));
+t('staff cannot send the invoice to a customer who did not share',
+  /if not o\.phone_shared then[\s\S]*?phone_not_shared/.test(fnBody('staff_order_share')));
+t('the customer phone column is not readable from the browser',
+  /revoke select on public\.orders from anon, authenticated/.test(D9) &&
+  !/customer_phone/.test((D9.match(/grant select \([\s\S]*?\)\s*on public\.orders to authenticated/) || [''])[0]));
+t('the phone backfill runs once only',
+  /if not exists \(select 1 from public\.app_settings where key = 'consents_backfill_at'\)/.test(D9));
+
+t('no marketing content without an active marketing consent',
+  /if not public\.consent_active\(p_device, p_restaurant, 'marketing'\) then[\s\S]*?no_marketing_consent/.test(ad9));
+t('the marketing audience exposes a count only (no phones, no device ids)',
+  /'count', v_count/.test(ma9) && !/'device_id'/.test(ma9) && !/'phone'/.test(ma9));
+t('marketing consent is never a condition for an order',
+  !/p_consent_marketing then[\s\S]{0,120}return jsonb_build_object\('ok', false/.test(co9));
+
+// ---- النقاط: استحقاق وعرض فقط، بلا استبدال ولا أثر مالي ----
+const D10 = fs.readFileSync('supabase/migrations/0010_loyalty.sql', 'utf8');
+const tr10 = fnBody('transition_order');
+const sg10 = fnBody('staff_grant_points');
+const sc10 = fnBody('staff_order_by_code');
+
+t('points ledger is one row per order (unique order_id)',
+  /order_id\s+uuid unique references public\.orders/.test(D10));
+t('points ledger is append-only (guard blocks delete and amount changes)',
+  /function public\.guard_points_ledger/.test(D10) &&
+  /if tg_op = 'DELETE' then/.test(D10) && /new\.points <> old\.points/.test(D10));
+t('the only allowed ledger update is pending → applied/cancelled',
+  /old\.status <> 'pending' or new\.status not in \('applied','cancelled'\)/.test(D10));
+t('the balance is a sum, never a stored counter',
+  /select coalesce\(sum\(points\), 0\) into v_balance/.test(D10) &&
+  !/add column if not exists points_balance/.test(D10));
+t('points are credited only when the order completes',
+  tr10.indexOf("set status = 'applied', applied_at = now()") >
+    tr10.indexOf('insert into public.restaurant_ledger') &&
+  /and status = 'pending'/.test(tr10));
+t('a cancelled order never gets points credited',
+  /if p_to in \('cancelled','no_show'\) then[\s\S]*?set status = 'cancelled'/.test(tr10));
+t('granting points is refused on a cancelled order',
+  /if o\.status in \('cancelled','no_show'\) then[\s\S]*?invalid_transition/.test(sg10));
+t('points cannot be granted twice on the same order',
+  /points_already_granted/.test(sg10) && /exception when unique_violation then/.test(sg10));
+t('points cannot be granted when the restaurant disabled them',
+  /if not r\.points_enabled then[\s\S]*?points_disabled/.test(sg10));
+t('a non-positive amount is rejected instead of silently ignored',
+  /if v_points is null or v_points <= 0 then[\s\S]*?points_invalid/.test(sg10));
+t('the admin ceiling is enforced on every write path',
+  /function public\.guard_points_settings/.test(D10) &&
+  /before insert or update on public\.restaurants/.test(D10) &&
+  /v_cap := case when r\.points_max_per_order > 0/.test(sg10));
+t('the ceiling is an editable setting, not a hardcoded number',
+  /'points_hard_cap'/.test(D10) && /function public\.points_hard_cap/.test(D10));
+t('only staff_grant_points writes the ledger, and clients cannot read it',
+  (D10.match(/insert into public\.points_ledger/g) || []).length === 1 &&
+  /revoke all on public\.points_ledger from anon, authenticated/.test(D10) &&
+  /alter table public\.points_ledger enable row level security/.test(D10) &&
+  !/create policy[\s\S]{0,60}points_ledger/.test(D10));
+t('internal points helpers are not exposed to the API',
+  /revoke execute on function public\.points_hard_cap/.test(D10) &&
+  /revoke execute on function public\.guard_points_ledger/.test(D10));
+t('points are absent from the money maths (fees and net unchanged)',
+  /least\(v_fee, v_base\)/.test(tr10) && /round\(ord\.order_total - v_fee, 2\)/.test(tr10) &&
+  /'revenue', \(select coalesce\(sum\(platform_fee\),0\)/.test(D10));
+t('points are accrual/display only — no redemption path exists',
+  /'redeemable', false/.test(D10) && !/points_redeem|redeem_points/.test(D10));
+
+t('the barcode reuses the order code (no second code is generated)',
+  /'code', o\.code/.test(sc10) && !/barcode_code|new_barcode_code/.test(D10));
+t('an unknown or malformed scan code is rejected explicitly',
+  /invalid_order_code/.test(sc10) && /\^\[0-9A-F\]\{6\}\$/.test(sc10));
+t('the scan lookup is scoped to the staff restaurant',
+  /where code = v_code and restaurant_id = v_id/.test(sc10));
+t('the scan payload shows the same masked-phone rule as the order list',
+  /else public\.mask_phone\(o\.customer_phone\) end/.test(sc10));
+
 // ---- structural completeness: catch truncated CREATE TABLE / files ----
-const SRC = ['0001_schema', '0002_rls', '0003_functions', '0004_seed', '0005_site_visitors', '0006_admin_bootstrap'];
+const SRC = ['0001_schema', '0002_rls', '0003_functions', '0004_seed', '0005_site_visitors',
+  '0006_admin_bootstrap', '0007_whatsapp', '0008_delivery', '0009_consents', '0010_loyalty'];
 console.log('\n--- structural completeness ---');
 for (const n of SRC) {
   const raw = fs.readFileSync('supabase/migrations/' + n + '.sql', 'utf8');
@@ -99,8 +335,10 @@ for (const n of SRC) {
     }
     t(n + ': table ' + name + ' complete', closed);
   }
-  // only the schema file is expected to define tables
-  if (n === '0001_schema') t('0001_schema: found ' + tables + ' table definitions', tables >= 20);
+  // only these files are expected to define tables (new tables come with their migration)
+  const TABLE_FILES = { '0001_schema': 20, '0010_loyalty': 1 };
+  if (n in TABLE_FILES) t(n + ': found ' + tables + ' table definitions (>= ' + TABLE_FILES[n] + ')',
+    tables >= TABLE_FILES[n]);
   else t(n + ': defines no tables (as expected)', tables === 0);
 
   const lastCode = lines.filter(l => l.trim() && !l.trim().startsWith('--')).pop() || '';

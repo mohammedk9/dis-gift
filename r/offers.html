@@ -30,7 +30,8 @@ if (!auth) throw new Error('unauthorized');
 
 $('#tabs').innerHTML = `<div class="container"><div class="tabs">
   ${[['d','اللوحة','./'],['o','الطلبات','./orders.html'],['m','المنيو','./menu.html'],
-     ['f','العروض','./offers.html'],['s','كشف الحساب','./statement.html'],
+     ['f','العروض','./offers.html'],['c','مسح الباركود','./scan.html'],
+     ['s','كشف الحساب','./statement.html'],
      ['p','الملف','./profile.html']].map(([k,l,h]) =>
     `<a class="tab ${k==='f'?'active':''}" href="${h}">${l}</a>`).join('')}
 </div></div>`;

@@ -36,7 +36,7 @@
 <script src="assets/js/runtime-config-live.js"></script>
 <script src="assets/js/vendor/supabase.js"></script>
 <script type="module">
-import { sb, deviceId, areaId, setArea, getGift, setGift } from './assets/js/core.js';
+import { sb, deviceId, areaId, setArea, getGift, setGift, sar } from './assets/js/core.js';
 import { $, esc, toast, modal, requireConfig, customerNav, initPWA } from './assets/js/ui.js';
 
 $('#nav').innerHTML = customerNav('gift');
@@ -165,11 +165,17 @@ function stageOpened(d) {
 
       <div class="flex mt" style="gap:8px;flex-wrap:wrap">
         ${r.pickup_enabled ? '<span class="badge badge-green">استلام متاح</span>' : ''}
-        ${r.delivery_enabled ? '<span class="badge badge-blue">توصيل المنشأة</span>' : ''}
+        ${r.delivery_enabled ? `<span class="badge badge-blue">توصيل المنشأة${
+          Number(r.delivery_fee) > 0 ? ' · ' + sar(r.delivery_fee) : ' · بلا رسوم'}</span>` : ''}
         <span class="badge">التحضير ~${esc(r.prep_time_min)} دقيقة</span>
         ${o.expires_at ? `<span class="badge badge-orange">ينتهي ${new Date(o.expires_at)
           .toLocaleDateString('ar-SA')}</span>` : ''}
       </div>
+
+      ${g.code ? `<div class="between small mt"
+        style="background:var(--cream);border-radius:12px;padding:10px 12px">
+        <span>كود هديتك — يتأكد منه الموظف</span>
+        <span dir="ltr" style="font-weight:700;letter-spacing:1px">${esc(g.code)}</span></div>` : ''}
 
       <button class="btn btn-primary btn-block btn-lg mt" id="orderNow">اطلب الآن</button>
       ${g.redeemed ? '<div class="alert alert-ok mt mb">تم استخدام هذه الهدية في طلب.</div>' : ''}

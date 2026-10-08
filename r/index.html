@@ -35,7 +35,8 @@ $('#logout').onclick = async () => { await sb.auth.signOut(); location.href = '.
 
 $('#tabs').innerHTML = `<div class="container"><div class="tabs">
   ${[['d','اللوحة','./'],['o','الطلبات','./orders.html'],['m','المنيو','./menu.html'],
-     ['f','العروض','./offers.html'],['s','كشف الحساب','./statement.html'],
+     ['f','العروض','./offers.html'],['c','مسح الباركود','./scan.html'],
+     ['s','كشف الحساب','./statement.html'],
      ['p','الملف','./profile.html']].map(([k,l,h]) =>
     `<a class="tab ${k==='d'?'active':''}" href="${h}">${l}</a>`).join('')}
 </div></div>`;
@@ -71,7 +72,32 @@ $('#app').innerHTML = `
       <div class="stat-v">${d.completed_orders}</div></div>
     <div class="stat"><div class="stat-k">هدايا مفتوحة</div>
       <div class="stat-v">${d.gifts_opened}</div></div>
+    <div class="stat"><div class="stat-k">طلبات توصيل (30 يوم)</div>
+      <div class="stat-v">${d.delivery_orders}</div></div>
+    <div class="stat"><div class="stat-k">رسوم توصيل محصّلة</div>
+      <div class="stat-v">${sar(d.delivery_fees_collected)}</div></div>
+    ${d.awaiting_price_confirmation ? `<div class="stat" style="border-color:var(--orange-light)">
+      <div class="stat-k">بانتظار تأكيد السعر</div>
+      <div class="stat-v" style="color:var(--orange-deep)">${d.awaiting_price_confirmation}</div></div>` : ''}
+    ${d.points_enabled ? `<div class="stat"><div class="stat-k">نقاط ممنوحة (30 يوم)</div>
+      <div class="stat-v">${d.points_granted}</div></div>
+    <div class="stat"><div class="stat-k">نقاط معلَّقة</div>
+      <div class="stat-v">${d.points_pending}</div></div>
+    <div class="stat"><div class="stat-k">عملاء لديهم نقاط</div>
+      <div class="stat-v">${d.points_customers}</div></div>` : ''}
   </div>
+
+  <div class="card mt">
+    <div style="font-weight:700;margin-bottom:8px">تسليم الطلبات ومسح الباركود</div>
+    <p class="small muted">افتح صفحة المسح، اكتب كود الطلب الظاهر تحت باركود العميل،
+      راجع الهدية والأصناف، امنح النقاط، ثم أكّد التسليم.
+      النقاط تُعتمد في رصيد العميل عند اكتمال الطلب فقط — ولا تُمنح على طلب ملغي.</p>
+    <a class="btn btn-primary btn-block mt" href="scan.html">مسح باركود طلب</a>
+  </div>
+
+  ${d.awaiting_price_confirmation ? `<div class="alert alert-warn">
+    ${d.awaiting_price_confirmation} طلب بانتظار تأكيد العميل لرسوم التوصيل —
+    لا يمكن قبوله قبل التأكيد، ويمكنك رفضه.</div>` : ''}
 
   <div class="card mt">
     <div style="font-weight:700;margin-bottom:12px">من الهدية إلى الطلب المكتمل</div>

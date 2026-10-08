@@ -19,8 +19,9 @@
 <script src="../assets/js/runtime-config-live.js"></script>
 <script src="../assets/js/vendor/supabase.js"></script>
 <script type="module">
-import { sb } from '../assets/js/core.js';
+import { sb, sar } from '../assets/js/core.js';
 import { $, esc, toast, requireConfig, guardStaff } from '../assets/js/ui.js';
+import { localNormalizeWhatsapp, whatsappDisplay } from '../assets/js/whatsapp.js';
 
 if (!requireConfig()) throw new Error('not configured');
 const auth = await guardStaff({ allowAdmin: false });
@@ -28,7 +29,8 @@ if (!auth) throw new Error('unauthorized');
 
 $('#tabs').innerHTML = `<div class="container"><div class="tabs">
   ${[['d','اللوحة','./'],['o','الطلبات','./orders.html'],['m','المنيو','./menu.html'],
-     ['f','العروض','./offers.html'],['s','كشف الحساب','./statement.html'],
+     ['f','العروض','./offers.html'],['c','مسح الباركود','./scan.html'],
+     ['s','كشف الحساب','./statement.html'],
      ['p','الملف','./profile.html']].map(([k,l,h]) =>
     `<a class="tab ${k==='p'?'active':''}" href="${h}">${l}</a>`).join('')}
 </div></div>`;
@@ -40,6 +42,16 @@ const { data: slots } = await sb.from('pickup_slots')
   .select('slot_time').eq('restaurant_id', rid).eq('is_active', true).order('slot_time');
 
 const slotStr = (slots || []).map(s => s.slot_time.slice(0, 5)).join(', ');
+
+/* الحد الأعلى لرسوم التوصيل يحدده الأدمن في الإعدادات (السيرفر يتحقق منه أيضاً) */
+const { data: capRow } = await sb.from('app_settings').select('value')
+  .eq('key', 'delivery_fee_max').maybeSingle();
+const feeMax = Number(capRow?.value ?? 0);
+
+/* الحد الأعلى للنقاط يحدده الأدمن (السيرفر يتحقق منه أيضاً) */
+const { data: pcapRow } = await sb.from('app_settings').select('value')
+  .eq('key', 'points_hard_cap').maybeSingle();
+const pointsCap = Number(pcapRow?.value ?? 0);
 
 $('#app').innerHTML = `
   <div class="page-head"><h1 class="page-title">ملف المنشأة</h1></div>
@@ -90,6 +102,12 @@ $('#app').innerHTML = `
     <label class="check"><input type="checkbox" id="f_delivery"
       ${r?.delivery_enabled ? 'checked' : ''}> توصيل من المنشأة</label>
     <p class="hint">المنصة لا تقوم بالتوصيل. التوصيل تنفذه المنشأة نفسها.</p>
+    <div class="field"><label class="label">رسوم التوصيل لكل طلب (ر.س)</label>
+      <input class="input" id="f_dfee" inputmode="decimal"
+        value="${Number(r?.delivery_fee || 0)}" ${r?.delivery_enabled ? '' : 'disabled'}>
+      <p class="hint" id="f_dfee_hint">تحددها أنت لكل طلب توصيل، والعميل يراها قبل الطلب
+        ويؤكدها. الحد الأعلى من الإدارة: ${sar(feeMax)}. الرسوم تُحصَّل لك كاملة —
+        رسوم المنصة الثابتة تُحسب على قيمة الطلب بلا التوصيل.</p></div>
   </div>
 
   <div class="card mt">
@@ -100,14 +118,62 @@ $('#app').innerHTML = `
     <p class="hint">اتركها فارغة إذا كنت لا تريد تحديد أوقات. العميل سيتواصل معك بدل اختيار وقت.</p>
   </div>
 
+  <div class="card mt">
+    <h3 class="section-title" style="margin-top:0;font-size:15px">واتساب المنشأة</h3>
+    <div class="field"><label class="label">رقم الواتساب</label>
+      <input class="input" id="f_wa" inputmode="tel" placeholder="05xxxxxxxx"
+        value="${esc(r?.whatsapp ? '0' + r.whatsapp.slice(3) : '')}">
+      <p class="hint" id="f_wa_hint">يُرسل العميل عليه فاتورة طلبه: كود الهدية + الخصم + الإجمالي.
+        احذف الرقم إذا لم ترغب في استقبال الفواتير.</p></div>
+    <label class="check"><input type="checkbox" id="f_wa_on"
+      ${r?.whatsapp_orders_enabled ? 'checked' : ''}> استقبال فاتورة الطلب عبر واتساب</label>
+    <p class="hint">القناة بلا رسوم: الطلب يُنشأ في المنصة أولاً، والواتساب يوصّل الفاتورة فقط.</p>
+  </div>
+
+  <div class="card mt">
+    <h3 class="section-title" style="margin-top:0;font-size:15px">نقاط الولاء</h3>
+    <label class="check"><input type="checkbox" id="f_points"
+      ${r?.points_enabled ? 'checked' : ''}> منح نقاط على الطلبات المكتملة</label>
+    <div class="row2 mt">
+      <div class="field"><label class="label">نقاط لكل طلب</label>
+        <input class="input" id="f_ppoints" inputmode="numeric"
+          value="${Number(r?.points_per_order || 0)}"></div>
+      <div class="field"><label class="label">الحد الأعلى لكل طلب</label>
+        <input class="input" id="f_pmax" inputmode="numeric"
+          value="${Number(r?.points_max_per_order || 0)}"></div>
+    </div>
+    <p class="hint">تُمنح النقاط مرة واحدة لكل طلب بعد مسح باركوده، ولا تدخل رصيد العميل
+      إلا عند اكتماله — والطلب الملغي لا نقاط له. الحد الأعلى من الإدارة: ${pointsCap} نقطة.
+      النقاط استحقاق وعرض فقط في هذه المرحلة: لا استبدال ولا خصم ولا رصيد مالي.</p>
+  </div>
+
   <button class="btn btn-primary btn-block btn-lg mt" id="save">حفظ التغييرات</button>
 
   <div class="card mt">
     <button class="btn btn-ghost btn-block" id="logout">تسجيل الخروج</button>
   </div>`;
 
+/* معاينة رقم الواتساب — التطبيع النهائي على السيرفر */
+$('#f_wa').addEventListener('input', () => {
+  const raw = $('#f_wa').value.trim();
+  const hint = $('#f_wa_hint');
+  if (!raw) {
+    hint.style.color = '';
+    hint.textContent = 'لا يوجد رقم — لن يستقبل العميل الفاتورة عبر واتساب.';
+    return;
+  }
+  const norm = localNormalizeWhatsapp(raw);
+  hint.style.color = norm ? '' : '#c0392b';
+  hint.textContent = norm ? 'سيُحفظ الرقم: ' + whatsappDisplay(raw)
+    : 'رقم غير صحيح — أدخله بصيغة 05xxxxxxxx أو 9665xxxxxxxx';
+});
+
 $('#save').onclick = async () => {
-  await sb.from('restaurants').update({
+  const waRaw = $('#f_wa').value.trim();
+  if (waRaw && !localNormalizeWhatsapp(waRaw))
+    return toast('رقم الواتساب غير صحيح — أدخله بصيغة 05xxxxxxxx');
+
+  const { error } = await sb.from('restaurants').update({
     business_type: $('#f_biz').value,
     name: $('#f_name').value.trim(),
     phone: $('#f_phone').value.trim(),
@@ -118,15 +184,56 @@ $('#save').onclick = async () => {
     cover_url: $('#f_cover').value.trim() || null,
     prep_time_min: Number($('#f_prep').value) || 20,
     pickup_enabled: $('#f_pickup').checked,
-    delivery_enabled: $('#f_delivery').checked
+    delivery_enabled: $('#f_delivery').checked,
+    min_order_total: Number($('#f_min').value) || 0
   }).eq('id', rid);
-  await sb.from('restaurants')
-    .update({ min_order_total: Number($('#f_min').value) || 0 }).eq('id', rid);
+  if (error) return toast('تعذّر حفظ الملف');
+
+  /* الرقم يُطبَّع على السيرفر (normalize_whatsapp) ولا يُخزَّن كما كُتب */
+  const { data: wa } = await sb.rpc('set_restaurant_whatsapp', {
+    p_whatsapp: waRaw || null, p_enabled: $('#f_wa_on').checked
+  });
+  if (!wa?.ok) return toast(wa?.error === 'invalid_whatsapp'
+    ? 'رقم الواتساب غير صحيح — أدخله بصيغة 05xxxxxxxx'
+    : 'تعذّر حفظ رقم الواتساب');
+  if (wa.whatsapp) $('#f_wa').value = '0' + wa.whatsapp.slice(3);
 
   const list = $('#f_slots').value.split(',').map(s => s.trim()).filter(Boolean);
   await sb.rpc('set_pickup_slots', { p_slots: list });
+
+  /* رسوم التوصيل: التحقق النهائي على السيرفر (الحد الأعلى + الصيغة) */
+  const feeRaw = $('#f_dfee').value.trim();
+  const { data: fee } = await sb.rpc('set_restaurant_delivery_fee', {
+    p_fee: feeRaw === '' ? 0 : Number(feeRaw)
+  });
+  if (!fee?.ok) return toast(fee?.error === 'delivery_fee_cap'
+    ? `الحد الأعلى لرسوم التوصيل ${sar(Number(fee.cap))} — اخفض المبلغ`
+    : fee?.error === 'delivery_fee_invalid'
+      ? 'أدخل رسوم التوصيل رقماً صحيحاً (منزلتان عشريتان على الأكثر)'
+      : 'تعذّر حفظ رسوم التوصيل');
+  $('#f_dfee').value = Number(fee.delivery_fee);
+
+  /* النقاط: التحقق النهائي على السيرفر (السقف الأعلى + الصيغة) */
+  const { data: pts } = await sb.rpc('set_restaurant_points', {
+    p_enabled: $('#f_points').checked,
+    p_per_order: Number($('#f_ppoints').value) || 0,
+    p_max: Number($('#f_pmax').value) || 0
+  });
+  if (!pts?.ok) return toast(pts?.error === 'points_limit'
+    ? `الحد الأعلى للنقاط ${pts.max} — اخفض القيمة`
+    : pts?.error === 'points_invalid'
+      ? 'أدخل عدداً صحيحاً غير سالب للنقاط'
+      : 'تعذّر حفظ إعدادات النقاط');
+  $('#f_ppoints').value = Number(pts.points_per_order);
+  $('#f_pmax').value = Number(pts.points_max_per_order);
+
   toast('✅ تم الحفظ');
 };
+
+/* الرسوم تُحرَّر فقط عند تفعيل التوصيل */
+$('#f_delivery').addEventListener('change', () => {
+  $('#f_dfee').disabled = !$('#f_delivery').checked;
+});
 
 $('#logout').onclick = async () => { await sb.auth.signOut(); location.href = '../login.html'; };
 </script>

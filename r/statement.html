@@ -27,7 +27,8 @@ if (!await guardStaff({ allowAdmin: false })) throw new Error('unauthorized');
 
 $('#tabs').innerHTML = `<div class="container"><div class="tabs">
   ${[['d','اللوحة','./'],['o','الطلبات','./orders.html'],['m','المنيو','./menu.html'],
-     ['f','العروض','./offers.html'],['s','كشف الحساب','./statement.html'],
+     ['f','العروض','./offers.html'],['c','مسح الباركود','./scan.html'],
+     ['s','كشف الحساب','./statement.html'],
      ['p','الملف','./profile.html']].map(([k,l,h]) =>
     `<a class="tab ${k==='s'?'active':''}" href="${h}">${l}</a>`).join('')}
 </div></div>`;
@@ -66,25 +67,30 @@ $('#app').innerHTML = `
     <div class="between small mt"><span>إجمالي قيمة الطلبات</span><b>${sar(s.total_order_value)}</b></div>
     <div class="between small mt"><span>إجمالي الخصومات</span>
       <b style="color:var(--orange-deep)">${sar(s.total_discounts)}</b></div>
+    <div class="between small mt"><span>رسوم التوصيل (تُحصَّل لك)</span>
+      <b>${sar(data.delivery_fees || 0)}</b></div>
+    <div class="between small mt"><span>نقاط ممنوحة (بلا قيمة مالية)</span>
+      <b>${Number(data.points_granted || 0)} نقطة</b></div>
     <div class="between small mt"><span>رسوم المنصة</span><b>${sar(s.total_platform_fees)}</b></div>
     <div style="height:1px;background:var(--line);margin:12px 0"></div>
     <div class="between"><span style="font-weight:700">المستحق</span>
       <span style="font-weight:700;font-size:19px;color:var(--orange-deep)">${sar(s.outstanding)}</span></div>
-    <p class="hint">رسوم المنصة رسوم ثابتة على الطلب المكتمل ولا تعتمد على قيمة الطلب.
-      يمكنك تجربة قيمة مختلفة من لوحة الإدارة في أي وقت.</p>
+    <p class="hint">رسوم المنصة رسوم ثابتة على الطلب المكتمل ولا تعتمد على قيمة الطلب،
+      ولا تُحسب على رسوم التوصيل. رسوم التوصيل يحددها كل منشأة وتُحصَّل لها كاملة.</p>
   </div>
 
   <h2 class="section-title">تفاصيل الحركة</h2>
   ${(data.lines || []).length ? `
   <div class="card" style="padding:0">
     <div class="table-wrap"><table>
-      <thead><tr><th>الطلب</th><th>القيمة</th><th>الخصم</th><th>رسوم المنصة</th>
+      <thead><tr><th>الطلب</th><th>القيمة</th><th>الخصم</th><th>توصيل</th><th>رسوم المنصة</th>
         <th>صافي المنشأة</th><th>الحالة</th><th>التاريخ</th></tr></thead>
       <tbody>
         ${(data.lines || []).map(l => `<tr>
           <td><b>#${esc(l.code)}</b></td>
           <td>${sar(l.order_total)}</td>
           <td>${sar(l.discount_amount)}</td>
+          <td>${sar(l.delivery_fee || 0)}</td>
           <td style="color:var(--orange-deep)">${sar(l.platform_fee)}</td>
           <td><b>${sar(l.restaurant_net)}</b></td>
           <td><span class="badge ${l.billing_status === 'paid' ? 'badge-green'

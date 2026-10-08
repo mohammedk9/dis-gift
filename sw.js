@@ -3,10 +3,12 @@
    لا يخزّن طلبات Supabase إطلاقاً (بيانات حية)
    ============================================================ */
 const BASE = new URL('./', self.location).pathname;
-const CACHE = 'hadiya-v2';
+const CACHE = 'hadiya-v5';
 const SHELL = [
-  'index.html', 'gift.html', 'orders.html', 'account.html',
+  'index.html', 'gift.html', 'orders.html', 'account.html', 'login.html', 'register.html',
+  'r/scan.html',
   'assets/css/app.css', 'assets/js/core.js', 'assets/js/ui.js',
+  'assets/js/auth-flows.js', 'assets/js/whatsapp.js', 'assets/js/barcode.js',
   'assets/js/vendor/supabase.js',
   'assets/icon.svg', 'manifest.webmanifest'
 ].map(path => new URL(path, self.location).pathname);

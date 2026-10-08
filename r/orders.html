@@ -23,6 +23,7 @@
 <script type="module">
 import { sb, sar, dt, STATUS_AR, STATUS_CLASS } from '../assets/js/core.js';
 import { $, esc, toast, modal, requireConfig, guardStaff } from '../assets/js/ui.js';
+import { openWhatsApp } from '../assets/js/whatsapp.js';
 
 if (!requireConfig()) throw new Error('not configured');
 const auth = await guardStaff({ allowAdmin: false });
@@ -30,17 +31,33 @@ if (!auth) throw new Error('unauthorized');
 
 $('#tabs').innerHTML = `<div class="container"><div class="tabs">
   ${[['d','اللوحة','./'],['o','الطلبات','./orders.html'],['m','المنيو','./menu.html'],
-     ['f','العروض','./offers.html'],['s','كشف الحساب','./statement.html'],
+     ['f','العروض','./offers.html'],['c','مسح الباركود','./scan.html'],
+     ['s','كشف الحساب','./statement.html'],
      ['p','الملف','./profile.html']].map(([k,l,h]) =>
     `<a class="tab ${k==='o'?'active':''}" href="${h}">${l}</a>`).join('')}
 </div></div>`;
 
 let filter = new URLSearchParams(location.search).get('f') || 'new';
+/* إعدادات النقاط: المنشأة تمنح النقاط بعد المسح — والمبلغ الافتراضي تحدده هي */
+let rsettings = {};
+
+const ERRORS = {
+  phone_not_shared: 'العميل لم يوافق على مشاركة رقمه — لا يمكن إرسال الفاتورة له.',
+  points_disabled: 'النقاط غير مُفعَّلة لهذه المنشأة — فعّلها من «ملف المنشأة».',
+  points_invalid: 'مبلغ النقاط غير صحيح — أدخل عدداً أكبر من صفر.',
+  points_limit: 'مبلغ النقاط يتجاوز الحد الأعلى المسموح.',
+  points_already_granted: 'نقاط هذا الطلب مُنحت مسبقاً — لا تُكرَّر على الطلب نفسه.'
+};
 
 async function load() {
   const { data } = await sb.rpc('restaurant_orders', { p_status: filter });
   const orders = (data?.orders || []).filter(o =>
     filter === 'all' || o.status === filter);
+
+  const { data: rrow } = await sb.from('restaurants')
+    .select('points_enabled, points_per_order, points_max_per_order')
+    .eq('id', auth.restaurantId).maybeSingle();
+  rsettings = rrow || {};
 
   $('#app').innerHTML = `
     <div class="page-head"><h1 class="page-title">الطلبات</h1></div>
@@ -53,6 +70,10 @@ async function load() {
       : '<div class="empty"><div class="empty-ico">📭</div><p>لا توجد طلبات.</p></div>'}`;
 
   $('#app').querySelectorAll('[data-act]').forEach(b => b.onclick = () => act(b));
+  $('#app').querySelectorAll('[data-share]').forEach(b =>
+    b.onclick = () => shareInvoice(b.dataset.share));
+  $('#app').querySelectorAll('[data-points]').forEach(b =>
+    b.onclick = () => grantPoints(b.dataset.points));
 }
 
 function card(o) {
@@ -63,15 +84,21 @@ function card(o) {
     ready:    [['completed','✅ تم التسليم'], ['no_show','لم يحضر']],
     completed:[], cancelled:[], no_show:[]
   }[o.status] || [];
+  // لا قبول قبل تأكيد العميل للسعر (يشمل رسوم التوصيل) — الرفض يبقى متاحاً
+  const blocked = !!o.awaiting_price_confirmation && o.status === 'new';
+  const actions = blocked ? next.filter(([s]) => s !== 'accepted') : next;
 
   return `<div class="card mb">
     <div class="between">
       <div>
         <div class="order-code">#${esc(o.code)} · ${dt(o.created_at)}</div>
         <div style="font-weight:700;margin-top:2px">${esc(o.customer_name)}</div>
-        <a class="small" href="tel:${esc(o.customer_phone)}"
-          style="color:var(--orange-deep);text-decoration:none" dir="ltr">
-          ${esc(o.customer_phone)}</a>
+        ${o.phone_shared
+          ? `<a class="small" href="tel:${esc(o.customer_phone)}"
+              style="color:var(--orange-deep);text-decoration:none" dir="ltr">
+              ${esc(o.customer_phone)}</a>`
+          : `<span class="small muted" dir="ltr">${esc(o.phone_masked || '—')}
+              · الرقم غير مُشارَك</span>`}
       </div>
       <div style="text-align:left">
         <span class="badge ${STATUS_CLASS[o.status]}">${STATUS_AR[o.status]}</span>
@@ -81,8 +108,15 @@ function card(o) {
 
     <div class="flex" style="gap:6px;margin-top:8px;flex-wrap:wrap">
       <span class="badge">${o.order_type === 'pickup' ? 'استلام' : 'توصيل المنشأة'}</span>
+      ${o.delivery_fee > 0 ? `<span class="badge badge-blue">رسوم التوصيل ${sar(o.delivery_fee)}</span>` : ''}
+      ${blocked ? '<span class="badge badge-orange">بانتظار تأكيد العميل للسعر</span>' : ''}
       ${o.pickup_slot ? `<span class="badge" dir="ltr">${esc(o.pickup_slot)}</span>` : ''}
       ${o.has_discount ? `<span class="badge badge-orange">خصم هدية ${sar(o.discount)}</span>` : ''}
+      ${o.gift_code ? `<span class="badge badge-orange">كود الهدية <b dir="ltr">${esc(o.gift_code)}</b></span>` : ''}
+      ${o.whatsapp_shared_at ? '<span class="badge badge-blue">وصلت الفاتورة عبر واتساب</span>' : ''}
+      ${o.phone_shared ? '' : '<span class="badge">الرقم مخفي بطلب العميل</span>'}
+      ${o.points ? `<span class="badge badge-green">نقاط ${o.points}${
+        o.points_status === 'pending' ? ' (تُعتمد عند الاكتمال)' : ''}</span>` : ''}
     </div>
 
     ${o.address ? `<p class="small muted mt">📍 ${esc(o.address)}</p>` : ''}
@@ -93,13 +127,26 @@ function card(o) {
         <span>${esc(i.name)} × ${i.qty}</span><span>${sar(i.line_total)}</span></div>`).join('')}
       ${o.discount > 0 ? `<div class="between small" style="color:var(--orange-deep)">
         <span>خصم تحمّله المنشأة</span><span>− ${sar(o.discount)}</span></div>` : ''}
+      ${o.delivery_fee > 0 ? `<div class="between small muted">
+        <span>رسوم التوصيل (تُحصَّل لك)</span><span>+ ${sar(o.delivery_fee)}</span></div>` : ''}
     </div>
 
-    ${next.length ? `<div class="flex mt" style="gap:8px">
-      ${next.map(([s,l]) => `<button class="btn btn-sm grow ${s==='cancelled'||s==='no_show'
+    ${blocked ? `<p class="hint">لا يمكن القبول قبل أن يؤكد العميل المبلغ ${sar(o.total)}.
+      يمكنك الرفض إن لم يوافق العميل على رسوم التوصيل.</p>` : ''}
+
+    ${actions.length ? `<div class="flex mt" style="gap:8px">
+      ${actions.map(([s,l]) => `<button class="btn btn-sm grow ${s==='cancelled'||s==='no_show'
         ? 'btn-red' : s==='completed' ? 'btn-green' : 'btn-primary'}"
         data-act="${s}" data-id="${o.id}">${l}</button>`).join('')}
     </div>` : ''}
+
+    <div class="flex mt" style="gap:8px">
+      <button class="btn btn-ghost btn-sm grow" data-share="${o.id}">
+        💬 إرسال الفاتورة للعميل</button>
+      ${rsettings.points_enabled && !o.points && !['cancelled','no_show'].includes(o.status)
+        ? `<button class="btn btn-ghost btn-sm grow" data-points="${o.id}">
+            ⭐ منح ${rsettings.points_per_order || 0} نقطة</button>` : ''}
+    </div>
   </div>`;
 }
 
@@ -123,11 +170,34 @@ async function act(btn) {
 async function go(id, to, note) {
   const { data, error } = await sb.rpc('transition_order',
     { p_order: id, p_to: to, p_note: note });
-  if (error || !data?.ok) return toast(data?.error === 'invalid_transition'
-    ? 'لا يمكن الانتقال إلى هذه الحالة' : 'تعذّر تحديث الطلب');
+  if (error || !data?.ok) {
+    if (data?.error === 'price_not_confirmed')
+      return toast('بانتظار تأكيد العميل للمبلغ قبل قبول الطلب');
+    return toast(data?.error === 'invalid_transition'
+      ? 'لا يمكن الانتقال إلى هذه الحالة' : 'تعذّر تحديث الطلب');
+  }
   toast(to === 'completed'
     ? `✅ تم — رسوم المنصة على هذا الطلب: ${sar(data.platform_fee)}`
     : 'تم التحديث');
+  await load();
+}
+
+/* الفاتورة تُبنى على السيرفر — نرسلها إلى واتساب العميل */
+async function shareInvoice(id) {
+  const { data } = await sb.rpc('staff_order_share', { p_order: id });
+  if (!data?.ok) return toast(data?.error === 'forbidden'
+    ? 'غير مسموح لهذا الحساب' : ERRORS[data?.error] || 'تعذّر تجهيز الفاتورة');
+  if (!data.whatsapp_ready) return toast('رقم جوال العميل غير صالح للإرسال');
+  openWhatsApp(data.whatsapp, data.invoice);
+}
+
+/* النقاط: تُمنح مرة واحدة لكل طلب — والسيرفر يرفض أي تكرار */
+async function grantPoints(id) {
+  const { data, error } = await sb.rpc('staff_grant_points', { p_order: id, p_points: null });
+  if (error || !data?.ok) return toast(ERRORS[data?.error] || 'تعذّر منح النقاط');
+  toast(data.status === 'applied'
+    ? `⭐ أُضيفت ${data.points} نقطة إلى رصيد العميل`
+    : `⭐ ${data.points} نقطة معلَّقة — تُعتمد عند اكتمال الطلب`);
   await load();
 }
 
