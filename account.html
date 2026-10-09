@@ -124,11 +124,22 @@
 <script src="assets/js/runtime-config-live.js"></script>
 <script src="assets/js/vendor/supabase.js"></script>
 <script type="module">
-import { sb, deviceId, areaId, setArea, dt } from './assets/js/core.js';
-import { $, esc, toast, confirmBox, requireConfig, customerNav, initPWA } from './assets/js/ui.js';
+import { sb, actorId, areaId, setArea, dt } from './assets/js/core.js';
+import { $, esc, toast, confirmBox, requireConfig, customerNav, initPWA, guardCustomer } from './assets/js/ui.js';
 
 $('#nav').innerHTML = customerNav('more');
 if (!requireConfig()) throw new Error('not configured');
+/* الملف والنقاط والموافقات كلها على الحساب — لا على المتصفح */
+const session = await guardCustomer();
+if (!session) throw new Error('redirecting');
+
+/* المصدر هو ملف الحساب في Supabase؛ localStorage مجرد ذاكرة سريعة لصفحة الدفع */
+const { data: myProfile } = await sb.from('profiles')
+  .select('full_name, phone').eq('id', session.user.id).maybeSingle();
+const profile = {
+  name:  (myProfile?.full_name || '').trim(),
+  phone: (myProfile?.phone || '').trim()
+};
 
 /* أيقونات SVG بدل الإيموجي */
 const svg = (inner, s = 20, sw = 1.8) =>
@@ -145,13 +156,13 @@ const ICON = {
 };
 
 const { data: areas } = await sb.rpc('active_areas');
-const { data: consentsRes } = await sb.rpc('customer_consents', { p_device: deviceId() });
+const { data: consentsRes } = await sb.rpc('customer_consents', { p_device: actorId() });
 /* consents = الحالة الفعّالة لكل (منشأة، غرض) — الأحدث هو الذي يحكم */
 const consents = consentsRes?.consents || [];
-const { data: points } = await sb.rpc('customer_points', { p_device: deviceId() });
+const { data: points } = await sb.rpc('customer_points', { p_device: actorId() });
 const pointsBalance = Number(points?.balance || 0);
 
-const savedName = (localStorage.getItem('hg_name') || '').trim();
+const savedName = profile.name;
 const areaName = id => ((areas || []).find(a => a.id === id) || {}).name || 'كل بريدة';
 
 $('#app').innerHTML = `
@@ -168,11 +179,13 @@ $('#app').innerHTML = `
 
   <div class="acc-card">
     <h3 class="acc-title"><span class="acc-ico">${ICON.user(19)}</span> بياناتي</h3>
+    <p class="hint">مسجّل الدخول بـ <b dir="ltr">${esc(session.user.email || '')}</b>
+      — بياناتك محفوظة في حسابك وتظهر على أي جهاز.</p>
     <div class="field"><label class="label">الاسم</label>
-      <input class="input" id="p_name" value="${esc(localStorage.getItem('hg_name') || '')}"></div>
+      <input class="input" id="p_name" value="${esc(profile.name)}"></div>
     <div class="field"><label class="label">رقم الجوال</label>
       <input class="input" id="p_phone" inputmode="tel"
-        value="${esc(localStorage.getItem('hg_phone') || '')}" placeholder="05xxxxxxxx">
+        value="${esc(profile.phone)}" placeholder="05xxxxxxxx">
       <p class="hint">يُشارك مع المنشأة فقط عند موافقتك: اختياري للاستلام، ومطلوب للتوصيل
         لأن المندوب يحتاج الرقم. ويمكنك سحب المشاركة من أي طلب قبل قبوله.</p></div>
     <div class="field"><label class="label">الحي</label>
@@ -224,23 +237,45 @@ $('#app').innerHTML = `
   </div>
 
   <div class="danger-card">
-    <button class="danger-btn" id="reset" type="button">${ICON.trash(18, 1.9)} مسح بيانات هذا الجهاز</button>
-    <p class="danger-hint">سيمسح الطلبات المحلية والهدية المخزنة على هذا المتصفح فقط.</p>
+    <button class="danger-btn" id="logout" type="button">تسجيل الخروج من هذا المتصفح</button>
+    <p class="danger-hint">تُنهى الجلسة هنا فقط — هديتك وطلباتك ونقاطك تبقى على حسابك.</p>
+    <button class="danger-btn" id="reset" type="button">${ICON.trash(18, 1.9)} مسح بيانات هذا المتصفح</button>
+    <p class="danger-hint">يمسح الهدية والسلة المخزّنة محلياً. بياناتك على حسابك لا تتأثر.</p>
   </div>`;
 
-$('#saveProfile').onclick = () => {
-  localStorage.setItem('hg_name', $('#p_name').value.trim());
-  localStorage.setItem('hg_phone', $('#p_phone').value.trim());
+$('#saveProfile').onclick = async () => {
+  const name = $('#p_name').value.trim();
+  const phone = $('#p_phone').value.trim();
+  const btn = $('#saveProfile');
+  btn.disabled = true;
+  /* الحفظ في الحساب — يظهر على أي جهاز يسجّل منه الدخول */
+  const { error } = await sb.from('profiles')
+    .update({ full_name: name || null, phone: phone || null })
+    .eq('id', session.user.id);
+  btn.disabled = false;
+  if (error) { toast('تعذّر الحفظ — أعد المحاولة'); return; }
+  profile.name = name; profile.phone = phone;
+  localStorage.setItem('hg_name', name);    // ذاكرة سريعة لصفحة الدفع
+  localStorage.setItem('hg_phone', phone);
   setArea($('#p_area').value);
-  $('#pv_name').textContent = $('#p_name').value.trim() || 'حسابي';
+  $('#pv_name').textContent = name || 'حسابي';
   $('#pv_area').textContent = areaName($('#p_area').value);
-  toast('تم الحفظ');
+  toast('تم الحفظ في حسابك');
+};
+
+$('#logout').onclick = async () => {
+  if (!await confirmBox('تسجيل الخروج؟',
+    'تُنهى الجلسة على هذا المتصفح. هديتك وطلباتك ونقاطك تبقى على حسابك.', 'خروج')) return;
+  await sb.auth.signOut();
+  ['hg_gift', 'hg_cart', 'hg_name', 'hg_phone', 'hg_addr'].forEach(k => localStorage.removeItem(k));
+  toast('تم تسجيل الخروج');
+  setTimeout(() => location.replace('login.html'), 400);
 };
 
 $('#reset').onclick = async () => {
-  if (!await confirmBox('مسح البيانات؟',
-    'سيتم مسح الطلبات والهدية المحفوظة على هذا المتصفح.', 'مسح')) return;
-  ['hg_cart','hg_gift','hg_name','hg_phone','hg_addr','hg_area'].forEach(k => localStorage.removeItem(k));
+  if (!await confirmBox('مسح بيانات المتصفح؟',
+    'سيتم مسح الهدية والسلة المحفوظة على هذا المتصفح. بياناتك على حسابك لا تتأثر.', 'مسح')) return;
+  ['hg_cart', 'hg_gift', 'hg_name', 'hg_phone', 'hg_addr', 'hg_area'].forEach(k => localStorage.removeItem(k));
   toast('تم المسح');
   setTimeout(() => location.href = 'gift.html', 500);
 };
@@ -248,7 +283,7 @@ $('#reset').onclick = async () => {
 $('#app').querySelectorAll('.consent-toggle').forEach(b => b.onclick = async () => {
   b.disabled = true;
   const { data } = await sb.rpc('set_consent', {
-    p_device: deviceId(), p_restaurant: b.dataset.rest,
+    p_device: actorId(), p_restaurant: b.dataset.rest,
     p_type: b.dataset.type, p_granted: b.dataset.granted === 'true'
   });
   if (!data?.ok) {

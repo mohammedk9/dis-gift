@@ -135,6 +135,7 @@ $('#app').innerHTML = `
   </div>
 
   ${err ? `<div class="alert alert-error">${esc(MSG[err] || 'تعذّر الدخول')}</div>` : ''}
+  <div id="loginAlert" class="alert alert-error" hidden></div>
 
   <div class="tabs" role="tablist" aria-label="نوع الحساب">
     <button class="tab" id="customerTab" type="button" role="tab">${ICON.user(17)} مستخدم</button>
@@ -154,8 +155,9 @@ $('#app').innerHTML = `
       <a class="btn btn-ghost grow btn-sm" id="signupCustomer" href="${registerUrl('customer')}">إنشاء حساب مستخدم</a>
       <button class="btn btn-ghost grow btn-sm" id="customerForgot" type="button">نسيت كلمة المرور</button>
     </div>
-    <p class="hint mt">يمكنك أيضاً تصفح العروض وفتح الهدية دون تسجيل الدخول.</p>
-    <a class="guest-link" href="gift.html">${ICON.gift(18, 2)} تصفّح كزائر ${ICON.arrow(17, 2.2)}</a>
+    <p class="hint mt">فتح الهدية اليومية وإتمام الطلبات يحتاج حساباً — التسجيل مجاني،
+      وهديتك وطلباتك تبقى على حسابك لا على هذا المتصفح.</p>
+    <a class="guest-link" href="index.html">تصفّح المنشآت كزائر ${ICON.arrow(17, 2.2)}</a>
   </section>
 
   <section class="card" id="businessPanel" role="tabpanel" hidden>
@@ -188,11 +190,61 @@ selectMode(mode);
 
 /* التسجيل ودواله المشتركة في assets/js/auth-flows.js */
 
+/* ---------- رسائل صريحة بدل «بيانات غير صحيحة» الغامضة ---------- */
+function hideAlert() {
+  const b = $('#loginAlert');
+  b.hidden = true; b.innerHTML = '';
+}
+function showAlert(html, kind = 'error') {
+  const b = $('#loginAlert');
+  b.className = 'alert alert-' + (kind === 'ok' ? 'ok' : 'error');
+  b.hidden = false;
+  b.innerHTML = html;
+}
+
+/* البريد لم يُؤكَّد: رسالة صريحة + زر إعادة إرسال الرابط */
+function showSignInError(error, email) {
+  const msg = error?.message || '';
+  if (error?.code === 'email_not_confirmed' || /not confirmed/i.test(msg)) {
+    showAlert('لم يتأكد بريدك الإلكتروني بعد. افتح رابط التأكيد الذي أرسلناه، '
+      + 'أو <button class="btn btn-sm btn-primary" id="resendMail" type="button">أعد إرسال الرابط</button>');
+    $('#resendMail').onclick = async () => {
+      const btn = $('#resendMail');
+      btn.disabled = true;
+      const { error: again } = await sb.auth.resend({
+        type: 'signup', email,
+        options: { emailRedirectTo: new URL('login.html', location.href).href + '?mode=' + mode }
+      });
+      btn.disabled = false;
+      if (again) return toast('تعذّر الإرسال — حاول بعد قليل');
+      toast('أُرسل رابط تأكيد جديد إلى بريدك');
+    };
+    return;
+  }
+  if (/invalid login credentials/i.test(msg)) return showAlert('البريد أو كلمة المرور غير صحيحة.');
+  if (/rate limit|too many/i.test(msg)) return showAlert('محاولات كثيرة — انتظر قليلاً ثم أعد المحاولة.');
+  showAlert(esc(msg || 'تعذّر الدخول. أعد المحاولة.'));
+}
+
+/* الدور لا يطابق التبويب: مخرج واضح لا رسالة مسدودة */
+function showAudienceMismatch(audience) {
+  if (audience === 'customer') {
+    showAlert('هذا حساب منشأة أو إدارة. سجّل الدخول من تبويب «مطعم / إدارة».');
+    return;
+  }
+  showAlert('هذا حساب مستخدم ولا يرتبط بمنشأة. '
+    + '<a id="finishBiz" role="button">أكمل تسجيل منشأتك من هنا</a>، '
+    + 'أو سجّل الدخول من تبويب «مستخدم».');
+  /* الرابط يُبنى هنا حتى لا يفسّره فاحص الروابط كمرجع ثابت */
+  $('#finishBiz').setAttribute('href', registerUrl('business'));
+}
+
 /* يكمل تسجيل منشأة معلّقاً ثم يوجّه للوحة المنشأة */
 async function handlePendingRegistration() {
   const pending = await finishPendingRegistration();
   if (!pending.handled) return false;
-  if (pending.message) toast(pending.message);
+  if (pending.code) showAlert(esc(pending.message || 'تعذّر إكمال تسجيل المنشأة'));
+  else if (pending.message) toast(pending.message);
   if (pending.redirect) setTimeout(() => location.replace(pending.redirect), 900);
   return true;
 }
@@ -212,16 +264,18 @@ async function signIn(audience) {
   const btn = $(`#${prefix}Signin`);
   const label = audience === 'customer' ? 'دخول المستخدم' : 'دخول المطعم / الإدارة';
   btn.disabled = true; btn.innerHTML = '<span class="spin"></span>';
+  hideAlert();
   const { error } = await sb.auth.signInWithPassword({ email, password: pass });
-  if (error) { btn.disabled = false; btn.textContent = label; return toast('بيانات الدخول غير صحيحة'); }
+  if (error) {
+    btn.disabled = false; btn.textContent = label;
+    return showSignInError(error, email);
+  }
   toast('تم الدخول');
   if (await handlePendingRegistration()) return;
   const destination = await destinationFor(audience, next);
   if (!destination) {
     btn.disabled = false; btn.textContent = label;
-    return toast(audience === 'customer'
-      ? 'هذا ليس حساب مستخدم. اختر دخول المطعم / الإدارة.'
-      : 'هذا الحساب غير مرتبط بمطعم أو بصلاحية الإدارة.');
+    return showAudienceMismatch(audience);
   }
   setTimeout(() => location.replace(destination), 300);
 }

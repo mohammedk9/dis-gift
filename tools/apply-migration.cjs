@@ -35,9 +35,11 @@ function pickMigration(arg) {
 
 (async () => {
   const env = { ...loadEnv(), ...process.env };
-  const url = env.DATABASE_URL || env.DIRECT_URL;
+  /* نقبل أول رابط صالح فعلاً: DATABASE_URL المشوّه (مثل فقدان @db.) لا يُسقط التطبيق */
+  const usable = v => { try { new URL(String(v)); return true; } catch { return false; } };
+  const url = [env.DATABASE_URL, env.DIRECT_URL].find(v => v && usable(v));
   if (!url) {
-    console.error('FAIL  لا يوجد DATABASE_URL أو DIRECT_URL في .env');
+    console.error('FAIL  لا يوجد رابط اتصال صالح (DATABASE_URL / DIRECT_URL) في .env');
     process.exit(1);
   }
 

@@ -113,13 +113,15 @@
 <script src="assets/js/runtime-config-live.js"></script>
 <script src="assets/js/vendor/supabase.js"></script>
 <script type="module">
-import { sb, deviceId, sar, dt, STATUS_AR, STATUS_CLASS } from './assets/js/core.js';
-import { $, esc, toast, requireConfig, customerNav, initPWA } from './assets/js/ui.js';
+import { sb, actorId, sar, dt, STATUS_AR, STATUS_CLASS } from './assets/js/core.js';
+import { $, esc, toast, requireConfig, customerNav, initPWA, guardCustomer } from './assets/js/ui.js';
 import { openWhatsApp } from './assets/js/whatsapp.js';
 import { code39Svg } from './assets/js/barcode.js';
 
 document.body.insertAdjacentHTML('beforeend', customerNav('orders'));
 if (!requireConfig()) throw new Error('not configured');
+/* تفاصيل الطلب وكوده تخصّ صاحب الحساب */
+if (!await guardCustomer()) throw new Error('redirecting');
 
 /* أيقونات SVG بدل الإيموجي */
 const svg = (inner, s = 20, sw = 1.8) =>
@@ -171,7 +173,7 @@ let ad = null;
 
 async function load() {
   if (!code) { location.replace('orders.html'); return; }
-  const { data } = await sb.rpc('customer_order', { p_device: deviceId(), p_code: code });
+  const { data } = await sb.rpc('customer_order', { p_device: actorId(), p_code: code });
   if (!data?.ok) {
     $('#app').innerHTML = `<div class="state-card"><div class="state-ico">${ICON.search(32, 1.6)}</div>
       <p>لم نعثر على هذا الطلب.</p>
@@ -195,7 +197,7 @@ async function load() {
   ad = null;
   if (r.id) {
     const { data: adRes } = await sb.rpc('customer_ad', {
-      p_device: deviceId(), p_restaurant: r.id
+      p_device: actorId(), p_restaurant: r.id
     });
     if (adRes?.ok) ad = adRes.ad;
     else if (adRes?.error === 'no_marketing_consent' || adRes?.error === 'no_ad_available') ad = null;
@@ -365,7 +367,7 @@ function syncDelivery() {
 /* تأكيد السعر: نرسل الرقم الذي رآه العميل — والسيرفر يرفض إن تغيّر */
 async function confirmPrice() {
   const { data } = await sb.rpc('customer_confirm_order_price', {
-    p_device: deviceId(), p_code: code, p_expected_total: currentTotal
+    p_device: actorId(), p_code: code, p_expected_total: currentTotal
   });
   if (!data?.ok) {
     toast(ORDER_ERRORS[data?.error] || 'تعذّر تأكيد السعر');
@@ -378,7 +380,7 @@ async function confirmPrice() {
 /* تغيير طريقة الاستلام قبل قبول المنشأة — الرسوم تُعاد حوسبتها على السيرفر */
 async function changeDelivery() {
   const { data } = await sb.rpc('set_order_delivery', {
-    p_device: deviceId(), p_code: code, p_type: $('#dtype').value,
+    p_device: actorId(), p_code: code, p_type: $('#dtype').value,
     p_address: $('#daddr').value.trim() || null,
     p_slot: $('#dslot').value || null
   });
@@ -401,7 +403,7 @@ async function changeDelivery() {
 async function savePhone() {
   const phone = $('#pphone').value.trim().replace(/[\s-]/g, '');
   const { data } = await sb.rpc('set_order_phone', {
-    p_device: deviceId(), p_code: code,
+    p_device: actorId(), p_code: code,
     p_phone: phone || null, p_consent: $('#pconsent').checked
   });
   if (!data?.ok) {
@@ -418,7 +420,7 @@ async function savePhone() {
 let invoiceCache = null;
 async function sendInvoice() {
   if (!invoiceCache) {
-    const { data } = await sb.rpc('customer_order_share', { p_device: deviceId(), p_code: code });
+    const { data } = await sb.rpc('customer_order_share', { p_device: actorId(), p_code: code });
     if (!data?.ok) return toast('تعذّر تجهيز الفاتورة');
     if (!data.whatsapp_ready) return toast('المنشأة لا تستقبل الفاتورة عبر واتساب');
     invoiceCache = data;

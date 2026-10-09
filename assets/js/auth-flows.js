@@ -5,8 +5,6 @@
    ============================================================ */
 import { sb, appUrl } from './core.js';
 
-const PENDING_KEY = 'hg_pending_restaurant';
-
 /* ---------- ?next= : مسار داخلي فقط ---------- */
 export function safeNext(raw) {
   if (!raw) return '';
@@ -57,27 +55,32 @@ export async function registerRestaurant(p) {
   return { ok: true, data: res };
 }
 
-/* ---------- تسجيل منشأة تحتاج تأكيد البريد ---------- */
-export const savePendingRestaurant = p => localStorage.setItem(PENDING_KEY, JSON.stringify(p));
-export const clearPendingRestaurant = () => localStorage.removeItem(PENDING_KEY);
-export function getPendingRestaurant() {
-  try { return JSON.parse(localStorage.getItem(PENDING_KEY)); } catch { return null; }
+/* ---------- تسجيل منشأة بانتظار تأكيد البريد ----------
+   بيانات المنشأة تُحفظ في user_metadata داخل الحساب نفسه، لا في المتصفح،
+   فتصمد أمام تأكيد البريد من جهاز آخر أو من تطبيق البريد. */
+const META_KEY = 'pending_restaurant';
+
+export const pendingRestaurantOf = user => user?.user_metadata?.[META_KEY] || null;
+
+export async function clearPendingRestaurant() {
+  const { error } = await sb.auth.updateUser({ data: { [META_KEY]: null } });
+  return !error;
 }
 
-/* يكمل التسجيل المعلّق بعد تأكيد البريد وتسجيل الدخول. */
+/* يكمل التسجيل المعلّق من بيانات الحساب بعد تأكيد البريد وتسجيل الدخول. */
 export async function finishPendingRegistration() {
-  const pending = getPendingRestaurant();
+  const { data: { session } } = await sb.auth.getSession();
+  const pending = pendingRestaurantOf(session?.user);
   if (!pending) return { handled: false };
 
-  const { data: { session } } = await sb.auth.getSession();
-  if (!session || pending.email?.toLowerCase() !== session.user.email?.toLowerCase()) {
-    return { handled: true, message: 'سجّل الدخول بالبريد الذي بدأ تسجيل المنشأة' };
+  const res = await registerRestaurant(pending);
+  /* already_registered = المنشأة أُنشئت في محاولة سابقة (أو من جهاز آخر):
+     نُكمل إلى اللوحة بدل رسالة خطأ تعيد المستخدم إلى نقطة الصفر. */
+  if (res.error && res.error !== 'already_registered') {
+    return { handled: true, message: res.error, code: res.error };
   }
 
-  const res = await registerRestaurant(pending);
-  if (res.error) return { handled: true, message: res.error, code: res.error };
-
-  clearPendingRestaurant();
+  await clearPendingRestaurant();
   return {
     handled: true,
     message: 'تم التسجيل — بانتظار تفعيل الإدارة',
@@ -104,19 +107,19 @@ export async function businessSignUp({ name, email, password, phone, payload }) 
   const { data, error } = await sb.auth.signUp({
     email, password,
     options: {
-      data: { full_name: name, phone },
+      // بيانات المنشأة تُحفظ مع الحساب نفسه، لا في localStorage:
+      // بعد تأكيد البريد من أي جهاز تُقرَأ من user_metadata فتُنشأ المنشأة تلقائياً.
+      data: { full_name: name, phone, [META_KEY]: { ...payload, email, name, phone } },
       emailRedirectTo: new URL(appUrl('login.html'), location.href).href
     }
   });
   if (error) return { error: error.message };
 
-  // بريد بحاجة تأكيد ⇒ نحفظ الطلب حتى يكتمل بعد الدخول
-  if (!data.session) {
-    savePendingRestaurant({ ...payload, email, name, phone });
-    return { ok: true, session: false };
-  }
+  // بريد بحاجة تأكيد ⇒ البيانات محفوظة في الحساب وتكتمل عند أول دخول.
+  if (!data.session) return { ok: true, session: false };
 
   const res = await registerRestaurant({ ...payload, email, name, phone });
   if (res.error) return { error: res.error };
+  await clearPendingRestaurant();
   return { ok: true, session: true, restaurantId: res.data.restaurant_id };
 }

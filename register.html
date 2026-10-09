@@ -53,10 +53,10 @@
 <script src="assets/js/runtime-config-live.js"></script>
 <script src="assets/js/vendor/supabase.js"></script>
 <script type="module">
-import { sb } from './assets/js/core.js';
+import { sb, appUrl } from './assets/js/core.js';
 import { $, esc, toast, requireConfig, initPWA } from './assets/js/ui.js';
-import { customerSignUp, businessSignUp, destinationFor, finishPendingRegistration, safeNext }
-  from './assets/js/auth-flows.js';
+import { customerSignUp, businessSignUp, registerRestaurant, destinationFor,
+  finishPendingRegistration, safeNext } from './assets/js/auth-flows.js';
 import { localNormalizeWhatsapp, whatsappDisplay } from './assets/js/whatsapp.js';
 
 if (!requireConfig()) throw new Error('not configured');
@@ -101,12 +101,13 @@ $('#app').innerHTML = `
         <input class="input" id="c_pass" type="password" autocomplete="new-password">
         <p class="hint">6 أحرف على الأقل.</p></div>
       <button class="btn btn-primary btn-lg btn-block" id="c_go" type="submit">إنشاء الحساب</button>
-      <p class="hint mt">يمكنك التصفح وفتح هدية اليوم دون تسجيل الدخول أيضاً.</p>
+      <p class="hint mt">بعد تأكيد بريدك تفتح هدية اليوم وتطلب من حسابك على أي جهاز.</p>
     </form>
   </section>
 
   <section id="businessPanel" role="tabpanel" hidden>
     <h2 class="modal-title title-row"><span class="title-ico">🏪</span> تسجيل منشأة</h2>
+    <p class="hint" id="bizAccount" hidden></p>
     <form id="businessForm">
       <div class="field"><label class="label" for="r_biz">نوع النشاط</label>
         <select class="input" id="r_biz">
@@ -150,6 +151,17 @@ $('#app').innerHTML = `
 const { data: areas } = await sb.rpc('active_areas');
 $('#r_area').innerHTML = '<option value="">— اختر —</option>' +
   (areas || []).map(a => `<option value="${a.id}">${esc(a.name)}</option>`).join('');
+
+/* مسجّل دخول بالفعل؟ منشأته تُضاف إلى حسابه نفسه — لا حساب جديد ولا كلمة مرور.
+   هذا هو المخرج لصاحب حساب لم تُنشأ له منشأة عند التسجيل. */
+const { data: { session: existing } } = await sb.auth.getSession();
+if (existing) {
+  $('#bizAccount').hidden = false;
+  $('#bizAccount').innerHTML = `مسجّل الدخول بـ <b dir="ltr">${esc(existing.user.email || '')}</b>
+    — ستُضاف المنشأة إلى هذا الحساب، ولا حاجة لإدخال بريد أو كلمة مرور.`;
+  $('#r_email').closest('.field').hidden = true;
+  $('#r_pass').closest('.field').hidden = true;
+}
 
 function setMode(value) {
   mode = value;
@@ -239,12 +251,28 @@ $('#businessForm').onsubmit = async event => {
   };
   const email = $('#r_email').value.trim();
   const password = $('#r_pass').value;
-  if (!payload.name || !email || password.length < 6)
-    return toast('أكمل البيانات — كلمة المرور 6 أحرف على الأقل');
+  if (!payload.name) return toast('أدخل اسم المنشأة');
   if (!payload.phone) return toast('أدخل رقم الجوال');
+  /* صاحب حساب قائم لا يحتاج بريداً ولا كلمة مرور */
+  if (!existing && (!email || password.length < 6))
+    return toast('أكمل البريد وكلمة مرور من 6 أحرف على الأقل');
 
   const btn = $('#r_go');
   btn.disabled = true; btn.innerHTML = '<span class="spin"></span>';
+
+  /* حساب قائم: تُنشأ المنشأة على الحساب نفسه داخل قاعدة البيانات */
+  if (existing) {
+    const own = await registerRestaurant({
+      ...payload, email: existing.user.email, name: payload.name, phone: payload.phone
+    });
+    if (own.error) {
+      btn.disabled = false; btn.textContent = 'إنشاء حساب المنشأة';
+      return toast(ERR[own.error] || own.error);
+    }
+    toast('✅ تم التسجيل — بانتظار تفعيل الإدارة');
+    return setTimeout(() => location.replace(appUrl('r/')), 900);
+  }
+
   const res = await businessSignUp({
     name: payload.name, email, password, phone: payload.phone, payload
   });
@@ -264,8 +292,7 @@ $('#businessForm').onsubmit = async event => {
 };
 
 /* تسجيل منشأة كان بانتظار تأكيد البريد — يُكمل عند وجود جلسة */
-const { data: { session } } = await sb.auth.getSession();
-if (session) {
+if (existing) {
   const pending = await finishPendingRegistration();
   if (pending.handled && pending.redirect) {
     toast(pending.message);

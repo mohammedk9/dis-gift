@@ -13,11 +13,15 @@
     "check:errors": "node tools/check-errors.cjs",
     "check:modules": "node tools/check-modules.cjs",
     "smoke": "node tools/smoke.cjs",
+    "test:live": "node tools/e2e-live.cjs",
     "db:migrate": "node tools/apply-migration.cjs"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.117.2",
     "libpg-query": "^18.1.5",
     "node-sql-parser": "^5.4.0"
+  },
+  "devDependencies": {
+    "pg": "^8.23.1"
   }
 }

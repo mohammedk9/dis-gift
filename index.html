@@ -727,15 +727,17 @@
 <script src="assets/js/runtime-config-live.js"></script>
 <script src="assets/js/vendor/supabase.js"></script>
 <script type="module">
-import { sb, deviceId, isConfigured } from './assets/js/core.js';
+import { sb, isConfigured, adoptIdentity } from './assets/js/core.js';
 
 async function loadVisitorCount() {
   if (!isConfigured()) return;
   const metric = document.querySelector('#visitorMetric');
   const value = document.querySelector('#visitorCount');
   try {
+    // الزائر المجهول يُسجَّل بلا معرّف؛ صاحب الحساب يُسجَّل بحسابه.
+    const user = await adoptIdentity();
     await sb.rpc('log_event', {
-      p_type: 'page_view', p_device: deviceId(), p_meta: { path: location.pathname }
+      p_type: 'page_view', p_device: user?.id ?? null, p_meta: { path: location.pathname }
     });
     const { data, error } = await sb.rpc('site_visitor_count');
     if (error || !Number.isFinite(Number(data))) return;

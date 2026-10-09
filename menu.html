@@ -117,11 +117,13 @@
 <script src="assets/js/runtime-config-live.js"></script>
 <script src="assets/js/vendor/supabase.js"></script>
 <script type="module">
-import { sb, deviceId, getGift, getCart, setQty, cartTotal, sar } from './assets/js/core.js';
-import { $, esc, toast, requireConfig, customerNav, initPWA } from './assets/js/ui.js';
+import { sb, actorId, getGift, getCart, setQty, cartTotal, sar } from './assets/js/core.js';
+import { $, esc, toast, requireConfig, customerNav, initPWA, guardCustomer } from './assets/js/ui.js';
 
 document.body.insertAdjacentHTML('beforeend', customerNav('gift'));
 if (!requireConfig()) throw new Error('not configured');
+/* قائمة المنشأة والطلب مرتبطان بالحساب */
+if (!await guardCustomer()) throw new Error('redirecting');
 
 /* أيقونات SVG بدل الإيموجي */
 const svg = (inner, s = 20, sw = 1.8) =>
@@ -150,7 +152,7 @@ if (!menu?.restaurant) {
 }
 
 sb.rpc('log_event', {
-  p_type: 'menu_view', p_device: deviceId(), p_restaurant: rid, p_gift: gift.gift.id
+  p_type: 'menu_view', p_device: actorId(), p_restaurant: rid, p_gift: gift.gift.id
 }).catch(() => {});
 
 const R = menu.restaurant;
@@ -228,7 +230,7 @@ menuEl.addEventListener('click', async e => {
   if (!loggedCart && getCart().length) {
     loggedCart = true;
     sb.rpc('log_event', {
-      p_type: 'cart_created', p_device: deviceId(), p_restaurant: rid, p_gift: gift.gift.id
+      p_type: 'cart_created', p_device: actorId(), p_restaurant: rid, p_gift: gift.gift.id
     }).catch(() => {});
   }
 });
@@ -246,8 +248,7 @@ function renderBar() {
   if (!c.length) { el.innerHTML = ''; return; }
   el.innerHTML = `<div class="cart-bar">
     <div class="grow">
-      <div class="sub">${c.reduce((s,i)=>s+i.qty,0)} صنف · ${giftLabel()}${
-        gift.gift.code ? ' · كود ' + esc(gift.gift.code) : ''}</div>
+      <div class="sub">${c.reduce((s,i)=>s+i.qty,0)} صنف · ${giftLabel()}</div>
       <div class="total">${sar(cartTotal())}</div>
     </div>
     <button class="btn btn-primary" id="checkout">إتمام الطلب ${ICON.arrow(18, 2.2)}</button>

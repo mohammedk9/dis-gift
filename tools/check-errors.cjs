@@ -4,7 +4,7 @@ const path = require('path');
 // كل ملفات الهجرات: أي رمز خطأ جديد يجب أن تُظهره الواجهة برسالة مفهومة.
 const MIGRATIONS = ['0001_schema', '0002_rls', '0003_functions', '0004_seed',
   '0005_site_visitors', '0006_admin_bootstrap', '0007_whatsapp', '0008_delivery',
-  '0009_consents', '0010_loyalty'];
+  '0009_consents', '0010_loyalty', '0011_accounts'];
 const sql = MIGRATIONS
   .map(n => fs.readFileSync('supabase/migrations/' + n + '.sql', 'utf8')).join('\n');
 

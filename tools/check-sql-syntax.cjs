@@ -1,7 +1,8 @@
 /* فحص بنية SQL: توازن الأقواس + اكتمال العبارات (tokenizer حقيقي) */
 const fs = require('fs');
 const FILES = ['0001_schema', '0002_rls', '0003_functions', '0004_seed', '0005_site_visitors',
-  '0006_admin_bootstrap', '0007_whatsapp', '0008_delivery', '0009_consents', '0010_loyalty'];
+  '0006_admin_bootstrap', '0007_whatsapp', '0008_delivery', '0009_consents', '0010_loyalty',
+  '0011_accounts'];
 const pairs = { ')': '(', ']': '[', '}': '{' };
 let bad = 0;
 

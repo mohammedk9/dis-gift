@@ -36,11 +36,13 @@
 <script src="assets/js/runtime-config-live.js"></script>
 <script src="assets/js/vendor/supabase.js"></script>
 <script type="module">
-import { sb, deviceId, areaId, setArea, getGift, setGift, sar } from './assets/js/core.js';
-import { $, esc, toast, modal, requireConfig, customerNav, initPWA } from './assets/js/ui.js';
+import { sb, actorId, areaId, setArea, getGift, setGift, sar } from './assets/js/core.js';
+import { $, esc, toast, modal, requireConfig, customerNav, initPWA, guardCustomer } from './assets/js/ui.js';
 
 $('#nav').innerHTML = customerNav('gift');
 if (!requireConfig()) throw new Error('not configured');
+/* كود الهدية لا يظهر إلا لصاحب حساب — الزائر يُحوَّل إلى الدخول */
+if (!await guardCustomer()) throw new Error('redirecting');
 
 let areas = [];
 const stage = $('#stage');
@@ -172,11 +174,6 @@ function stageOpened(d) {
           .toLocaleDateString('ar-SA')}</span>` : ''}
       </div>
 
-      ${g.code ? `<div class="between small mt"
-        style="background:var(--cream);border-radius:12px;padding:10px 12px">
-        <span>كود هديتك — يتأكد منه الموظف</span>
-        <span dir="ltr" style="font-weight:700;letter-spacing:1px">${esc(g.code)}</span></div>` : ''}
-
       <button class="btn btn-primary btn-block btn-lg mt" id="orderNow">اطلب الآن</button>
       ${g.redeemed ? '<div class="alert alert-ok mt mb">تم استخدام هذه الهدية في طلب.</div>' : ''}
       <p class="hint center mt">الدفع يتم مباشرة مع المنشأة. لا يوجد دفع إلكتروني عبر المنصة.</p>
@@ -190,8 +187,12 @@ async function render() {
   $('#openBtn').onclick = open;
 }
 
+const redirectToLogin = () => location.replace(
+  'login.html?mode=customer&next=' + encodeURIComponent(location.pathname + location.search));
+
 const OPEN_ERRORS = {
-  device_required: 'تعذّر التعرّف على هذا الجهاز. تأكد أن المتصفح يسمح بالتخزين المحلي.',
+  auth_required: null,        // جلسة منتهية ⇒ إعادة إلى الدخول
+  device_required: null,      // بقايا الواجهة القديمة ⇒ إعادة إلى الدخول
   no_offers_available: null   // له رسالة ودّية خاصة
 };
 
@@ -200,13 +201,16 @@ async function open() {
   btn.disabled = true;
   btn.innerHTML = '<span class="spin"></span> جارٍ الفتح…';
   const { data, error } = await sb.rpc('open_daily_gift', {
-    p_device: deviceId(), p_area: areaId()
+    p_device: actorId(), p_area: areaId()
   });
   if (error) {
+    // جلسة غير صالحة: نعيد المستخدم إلى الدخول بدل رسالة غامضة
+    if (/auth_required/.test(error.message || '')) return redirectToLogin();
     stage.innerHTML = stageError('تعذّر فتح الهدية');
     return;
   }
   if (!data?.ok) {
+    if (data?.error === 'auth_required' || data?.error === 'device_required') return redirectToLogin();
     if (data.error === 'no_offers_available') { stage.innerHTML = stageNoOffer(); return; }
     stage.innerHTML = stageError(
       OPEN_ERRORS[data.error] || 'تعذّر فتح الهدية حالياً');

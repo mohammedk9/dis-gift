@@ -38,21 +38,44 @@ export function appUrl(path = '') {
 }
 
 export const sb = createClient(CFG.url, CFG.anon, {
-  auth: { persistSession: true, autoRefreshToken: true, flowType: 'pkce' }
+  // implicit: رابط تأكيد البريد يجب أن يعمل من أي متصفح أو تطبيق بريد.
+  // pkce يطلب code_verifier محفوظاً في المتصفح الذي بدأ التسجيل، ويفشل من غيره.
+  auth: { persistSession: true, autoRefreshToken: true, flowType: 'implicit' }
 });
 
-/* ---------- device id: معرّف العميل في MVP (لا تسجيل) ---------- */
-export function deviceId() {
-  let d = localStorage.getItem('hg_device');
-  if (!d) {
-    d = (crypto.randomUUID ? crypto.randomUUID()
-      : 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, c => {
-          const r = Math.random() * 16 | 0;
-          return (c === 'x' ? r : (r & 3 | 8)).toString(16);
-        }));
-    localStorage.setItem('hg_device', d);
+/* ---------- هوية العميل ----------
+   الهوية هي حساب Supabase نفسه، لا متصفح هذا الجهاز:
+   قاعدة البيانات تتجاهل ما يُرسَل في p_device وتقرأ auth.uid() من الجلسة،
+   فالقيمة هنا للتوقيع فقط ولا تمنح العميل أي صلاحية ولا تُخزَّن في المتصفح. */
+let actor = '00000000-0000-0000-0000-000000000000';
+
+export async function currentUser() {
+  const { data } = await sb.auth.getSession();
+  return data.session?.user || null;
+}
+
+/** يُثبّت الهوية من الجلسة — يُستدعى مرة عند إقلاع كل صفحة محمية. */
+export async function adoptIdentity() {
+  const user = await currentUser();
+  const next = user?.id || '00000000-0000-0000-0000-000000000000';
+  /* تبديل الحساب على المتصفح نفسه: لا تُعرض بقايا الحساب السابق على غيره */
+  const previous = sessionStorage.getItem('hg_actor_seen');
+  if (previous && previous !== next) {
+    for (const key of ['hg_gift', 'hg_cart', 'hg_name', 'hg_phone', 'hg_addr']) {
+      try { localStorage.removeItem(key); } catch { /* تجاهل */ }
+    }
   }
-  return d;
+  try { sessionStorage.setItem('hg_actor_seen', next); } catch { /* تجاهل */ }
+  actor = next;
+  return user;
+}
+
+/** معرّف العميل المُرسَل مع النداءات. لا يمنح صلاحية: السيرفر يعتمد الجلسة. */
+export const actorId = () => actor;
+
+/* تنظيف بقايا نموذج الهوية القديم (المعرّف كان في المتصفح) */
+for (const key of ['hg_device', 'hg_actor', 'hg_pending_restaurant']) {
+  try { localStorage.removeItem(key); } catch { /* تجاهل */ }
 }
 
 /* ---------- area ---------- */
@@ -110,7 +133,19 @@ export const RSTATUS_AR = {
   pending: 'بانتظار التفعيل', active: 'نشط', suspended: 'موقوف', hidden: 'مخفي'
 };
 
-/* ---------- gift cache ---------- */
-export const getGift  = () => JSON.parse(localStorage.getItem('hg_gift')  || 'null');
-export const setGift  = g  => localStorage.setItem('hg_gift', JSON.stringify(g));
+/* ---------- gift cache ----------
+   الكود لا يُخزَّن في المتصفح ولا يُعرض فيه: يظهر في صفحة الطلب لصاحبه فقط.
+   (يُنقّى أيضاً ما خُزِّن قبل هذا التغيير حتى لا يبقى كود قديم في localStorage) */
+const stripCode = g => {
+  if (!g || typeof g !== 'object') return g;
+  const copy = { ...g };
+  delete copy.code;
+  if (copy.gift && typeof copy.gift === 'object') {
+    copy.gift = { ...copy.gift };
+    delete copy.gift.code;
+  }
+  return copy;
+};
+export const getGift  = () => stripCode(JSON.parse(localStorage.getItem('hg_gift')  || 'null'));
+export const setGift  = g  => localStorage.setItem('hg_gift', JSON.stringify(stripCode(g)));
 export const clearGift = () => localStorage.removeItem('hg_gift');

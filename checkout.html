@@ -21,13 +21,16 @@
 <script src="assets/js/runtime-config-live.js"></script>
 <script src="assets/js/vendor/supabase.js"></script>
 <script type="module">
-import { sb, deviceId, areaId, setArea, getGift, getCart, cartTotal, clearCart, sar }
+import { sb, actorId, areaId, setArea, getGift, getCart, cartTotal, clearCart, sar }
   from './assets/js/core.js';
-import { $, esc, toast, modal, requireConfig, customerNav, initPWA } from './assets/js/ui.js';
+import { $, esc, toast, modal, requireConfig, customerNav, initPWA, guardCustomer } from './assets/js/ui.js';
 import { openWhatsApp } from './assets/js/whatsapp.js';
 
 document.body.insertAdjacentHTML('beforeend', customerNav('gift'));
 if (!requireConfig()) throw new Error('not configured');
+/* الطلب مرتبط بالحساب: لا طلب ولا كود هدية بلا تسجيل دخول */
+const session = await guardCustomer();
+if (!session) throw new Error('redirecting');
 
 const gift = getGift(), cart = getCart();
 if (!gift || !cart.length) { location.replace('gift.html'); throw new Error('bad state'); }
@@ -38,6 +41,12 @@ const R = menu.restaurant;
 const { data: areaRows } = await sb.rpc('active_areas');
 const areas = areaRows || [];
 const val = k => localStorage.getItem(k) || '';
+
+/* بيانات العميل من حسابه في Supabase؛ المتجر المحلي ذاكرة سريعة فقط */
+const { data: myProfile } = await sb.from('profiles')
+  .select('full_name, phone').eq('id', session.user.id).maybeSingle();
+const profileName = (myProfile?.full_name || val('hg_name')).trim();
+const profilePhone = (myProfile?.phone || val('hg_phone')).trim();
 
 const sub = cartTotal();
 // رسوم التوصيل تأتي من السيرفر (restaurant_menu) — ما يظهر هنا للمعاينة فقط،
@@ -96,11 +105,11 @@ $('#app').innerHTML = `
   <div class="card mt">
     <h3 class="section-title" style="margin-top:0;font-size:15px">2️⃣ بيانات التواصل</h3>
     <div class="field"><label class="label">الاسم</label>
-      <input class="input" id="cname" value="${esc(val('hg_name'))}" placeholder="اسمك الكامل"></div>
+      <input class="input" id="cname" value="${esc(profileName)}" placeholder="اسمك الكامل"></div>
     <div class="row2">
       <div class="field"><label class="label">رقم الجوال
         <span class="muted small" id="phoneReq">(اختياري)</span></label>
-        <input class="input" id="cphone" value="${esc(val('hg_phone'))}" inputmode="tel"
+        <input class="input" id="cphone" value="${esc(profilePhone)}" inputmode="tel"
           placeholder="05xxxxxxxx"></div>
       <div class="field"><label class="label">الحي</label>
         <select class="input" id="carea">
@@ -213,17 +222,22 @@ $('#submit').onclick = async () => {
     return toast('المنشأة لم تحدد أوقات استلام — تواصل معه أو غداً');
   }
 
-  localStorage.setItem('hg_name', name);
+  localStorage.setItem('hg_name', name);    // ذاكرة سريعة محلية
   localStorage.setItem('hg_phone', phone);
   localStorage.setItem('hg_addr', $('#caddr').value.trim());
   setArea($('#carea').value);
+  /* يُحدَّث الاسم والجوال في الحساب أيضاً — لا يبقى الحفظ في المتصفح وحده */
+  if (name !== profileName || phone !== profilePhone) {
+    sb.from('profiles').update({ full_name: name || null, phone: phone || null })
+      .eq('id', session.user.id).then(() => {});
+  }
 
   const btn = $('#submit');
   btn.disabled = true;
   btn.innerHTML = '<span class="spin"></span> جارٍ الإرسال…';
 
   const { data, error } = await sb.rpc('create_order', {
-    p_device: deviceId(),
+    p_device: actorId(),
     p_gift: gift.gift.id,
     p_type: otype(),
     p_items: cart.map(i => ({ item_id: i.id, qty: i.qty })),
@@ -279,7 +293,7 @@ function priceConfirmStep(created) {
     onOpen: (m, close) => {
       m.querySelector('#price-ok').onclick = async () => {
         const { data } = await sb.rpc('customer_confirm_order_price', {
-          p_device: deviceId(), p_code: created.code, p_expected_total: Number(created.total)
+          p_device: actorId(), p_code: created.code, p_expected_total: Number(created.total)
         });
         close();
         if (!data?.ok) {
@@ -298,7 +312,7 @@ function priceConfirmStep(created) {
 /* الطلب أُنشئ أولاً بأرقام قاعدة البيانات، ثم نعرض قناة الإرسال */
 async function shareStep(code) {
   const { data: share } = await sb.rpc('customer_order_share', {
-    p_device: deviceId(), p_code: code
+    p_device: actorId(), p_code: code
   });
   const ready = !!share?.whatsapp_ready;
   const orderUrl = `order.html?code=${encodeURIComponent(code)}`;

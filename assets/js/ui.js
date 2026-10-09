@@ -1,7 +1,7 @@
 /* ============================================================
    ui.js — toast, modal, nav, guards
    ============================================================ */
-import { sb, isConfigured, appUrl } from './core.js';
+import { sb, isConfigured, appUrl, adoptIdentity } from './core.js';
 
 export const $  = (s, r = document) => r.querySelector(s);
 export const $$ = (s, r = document) => Array.from(r.querySelectorAll(s));
@@ -89,6 +89,18 @@ export function requireConfig() {
 export async function currentSession() {
   const { data } = await sb.auth.getSession();
   return data.session;
+}
+
+/** يحمي صفحات العميل: لا هدية ولا طلب ولا كود هدية بلا حساب. */
+export async function guardCustomer() {
+  const s = await currentSession();
+  if (!s) {
+    location.replace(appUrl('login.html') + '?mode=customer&next='
+      + encodeURIComponent(location.pathname + location.search));
+    return null;
+  }
+  await adoptIdentity();
+  return s;
 }
 
 /** يحمي صفحات المنشأة: يتطلب جلسة + دور منشأة وربطاً بمنشأة */

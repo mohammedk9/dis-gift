@@ -14,7 +14,7 @@ const t = (label, cond) => { cond ? pass++ : fail++; console.log((cond ? 'PASS  
 /* ---------- آخر تعريف يفوز ----------
    بعض الدوال تُعاد تعريفها في هجرات أحدث (0007 ثم 0008…)، والفحص يجب أن
    يقرأ النسخة الفعلية لا النسخة القديمة من 0003. */
-const LATER = ['0007_whatsapp', '0008_delivery', '0009_consents', '0010_loyalty']
+const LATER = ['0007_whatsapp', '0008_delivery', '0009_consents', '0010_loyalty', '0011_accounts']
   .map(n => fs.readFileSync('supabase/migrations/' + n + '.sql', 'utf8')).join('\n');
 const ALL = sql + '\n' + LATER;
 const fnBody = name => {
@@ -314,9 +314,80 @@ t('the scan lookup is scoped to the staff restaurant',
 t('the scan payload shows the same masked-phone rule as the order list',
   /else public\.mask_phone\(o\.customer_phone\) end/.test(sc10));
 
+// ---- 0011: الهوية على الحساب، وكود الهدية لا يُسلَّم لزائر ----
+console.log('\n--- account identity (0011) ---');
+const D11 = fs.readFileSync('supabase/migrations/0011_accounts.sql', 'utf8');
+const CUSTOMER_RPC = ['open_daily_gift', 'create_order', 'customer_order', 'customer_orders',
+  'customer_notifications', 'customer_consents', 'set_consent', 'customer_points',
+  'customer_ad', 'customer_confirm_order_price', 'set_order_delivery', 'set_order_phone',
+  'customer_order_share'];
+
+t('identity comes from the session, never from the value the browser sent',
+  /public\.assert_self\(p_device uuid\)[\s\S]*?v_uid uuid := auth\.uid\(\)/.test(D11));
+t('an anonymous caller is rejected explicitly instead of acting as a device',
+  /if v_uid is null then\s*\r?\n\s*raise exception 'auth_required'/.test(D11));
+t('every customer entry point overwrites the browser-supplied id',
+  CUSTOMER_RPC.every(n => new RegExp(
+    'create or replace function public\\.' + n + '\\b[\\s\\S]*?p_device := public\\.assert_self\\(p_device\\);'
+  ).test(D11)));
+t('the gift/order rows stay keyed by that id, so the same account cannot take two gifts',
+  /p_device := public\.assert_self\(p_device\)/.test(D11) &&
+  /unique \(device_id, gift_date\)/.test(schema));
+t('orders.user_id is finally populated from the same account id',
+  /create or replace function public\.sync_order_user_id/.test(D11) &&
+  /new\.user_id := new\.device_id/.test(D11) &&
+  /create trigger trg_orders_sync_user/.test(D11));
+t('the gift code is not returned at the moment the gift is opened',
+  !/'code',\s*g\.code/.test(D11.slice(D11.indexOf('create or replace function public.gift_payload'))));
+
+// ---- الواجهة: لا هوية في المتصفح ولا كود للزائر ----
+console.log('\n--- account identity (frontend) ---');
+const rd = f => fs.readFileSync(f, 'utf8');
+const CORE = rd('assets/js/core.js');
+const UIF = rd('assets/js/ui.js');
+const FLOWS = rd('assets/js/auth-flows.js');
+const GUARDED = ['gift.html', 'menu.html', 'checkout.html', 'order.html',
+  'orders.html', 'notices.html', 'account.html'];
+
+t('the browser no longer mints a customer identity',
+  !/localStorage\.setItem\('hg_device'/.test(CORE) && !/export function deviceId/.test(CORE));
+t('the identity is adopted from the session before guarded calls',
+  /export async function adoptIdentity/.test(CORE) && /await adoptIdentity\(\)/.test(UIF));
+t('every customer page requires an account (no code or order for a visitor)',
+  GUARDED.every(f => /guardCustomer\(\)/.test(rd(f))));
+t('no customer page still sends a browser-stored id',
+  !GUARDED.some(f => /\bdeviceId\(/.test(rd(f))));
+t('the gift code is never rendered to the customer',
+  !/g\.code\b/.test(rd('gift.html')) && !/gift\.gift\.code/.test(rd('menu.html')));
+t('a stale cached gift cannot leak a previously stored code',
+  /const stripCode/.test(CORE) && /delete copy\.gift\.code/.test(CORE));
+t('the business payload lives on the account, not in localStorage',
+  !/hg_pending_restaurant'\]?,?\s*=/.test(FLOWS) &&
+  /\[META_KEY\]: \{ \.\.\.payload/.test(FLOWS) &&
+  /user_metadata/.test(FLOWS) && /sb\.auth\.updateUser/.test(FLOWS));
+t('the confirmation link works from any browser (no PKCE verifier needed)',
+  /flowType: 'implicit'/.test(CORE) && !/flowType: 'pkce'/.test(CORE));
+t('a failed sign-in distinguishes an unconfirmed email and offers a resend',
+  /email_not_confirmed/.test(rd('login.html')) && /sb\.auth\.resend/.test(rd('login.html')));
+t('a wrong audience tab gives a way out instead of a dead end',
+  /showAudienceMismatch/.test(rd('login.html')) && /registerUrl\('business'\)/.test(rd('login.html')));
+t('a signed-in customer can finish registering a business on the same account',
+  /if \(existing\)/.test(rd('register.html')) && /registerRestaurant\(\{/.test(rd('register.html')));
+t('switching accounts on one browser does not expose the previous account data',
+  /sessionStorage\.getItem\('hg_actor_seen'\)/.test(CORE) &&
+  /previous !== next/.test(CORE));
+t('the profile is read from and written to the account',
+  /from\('profiles'\)/.test(rd('account.html')) && /update\(\{ full_name/.test(rd('account.html')));
+t('signing out is possible and only ends the session',
+  /sb\.auth\.signOut\(\)/.test(rd('account.html')));
+t('checkout takes customer details from the account, not from localStorage alone',
+  /myProfile\?\.full_name/.test(rd('checkout.html')) && /profilePhone/.test(rd('checkout.html')));
+
+
 // ---- structural completeness: catch truncated CREATE TABLE / files ----
 const SRC = ['0001_schema', '0002_rls', '0003_functions', '0004_seed', '0005_site_visitors',
-  '0006_admin_bootstrap', '0007_whatsapp', '0008_delivery', '0009_consents', '0010_loyalty'];
+  '0006_admin_bootstrap', '0007_whatsapp', '0008_delivery', '0009_consents', '0010_loyalty',
+  '0011_accounts'];
 console.log('\n--- structural completeness ---');
 for (const n of SRC) {
   const raw = fs.readFileSync('supabase/migrations/' + n + '.sql', 'utf8');
