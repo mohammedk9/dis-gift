@@ -382,6 +382,10 @@ t('signing out is possible and only ends the session',
   /sb\.auth\.signOut\(\)/.test(rd('account.html')));
 t('checkout takes customer details from the account, not from localStorage alone',
   /myProfile\?\.full_name/.test(rd('checkout.html')) && /profilePhone/.test(rd('checkout.html')));
+t('the homepage account menu tracks the session (guest vs. member)',
+  /accountGuest/.test(rd('index.html')) && /accountMember/.test(rd('index.html')) &&
+  /renderAccountState/.test(rd('index.html')) && /sb\.auth\.onAuthStateChange/.test(rd('index.html')));
+
 
 
 // ---- structural completeness: catch truncated CREATE TABLE / files ----

@@ -123,11 +123,15 @@
   }
   @keyframes pop{from{opacity:0;transform:translateY(-6px) scale(.98)}to{opacity:1;transform:none}}
   .account-menu-title{color:var(--muted);font-size:12px;font-weight:600;margin:4px 10px 6px}
-  .account-menu a{
+  /* [hidden] صريح: بعض قواعد العرض قد تتغلّب على خاصية hidden الافتراضية */
+  .account-menu [hidden]{display:none!important}
+  .account-menu a,.account-menu button{
     display:flex;align-items:center;gap:10px;color:var(--ink-soft);text-decoration:none;
     font-size:14px;font-weight:500;padding:10px;border-radius:10px;transition:.18s;
+    width:100%;background:none;border:0;font-family:inherit;text-align:start;cursor:pointer;
   }
-  .account-menu a:hover,.account-menu a:focus-visible{background:var(--peach);color:var(--orange-text)}
+  .account-menu a:hover,.account-menu a:focus-visible,
+  .account-menu button:hover,.account-menu button:focus-visible{background:var(--peach);color:var(--orange-text)}
   .account-menu-icon{width:18px;height:18px;display:grid;place-items:center;color:var(--orange);flex:none}
   .account-menu-divider{height:1px;background:var(--line);display:block;margin:6px 4px}
   .nav-toggle{display:none;background:none;border:0;cursor:pointer;color:var(--ink);padding:6px}
@@ -432,40 +436,65 @@
           </svg>
         </button>
         <div class="account-menu" id="accountMenu" role="menu" aria-label="خيارات الحساب" hidden>
-          <p class="account-menu-title">خيارات الحساب</p>
-          <a role="menuitem" href="register.html?type=customer">
-            <span class="account-menu-icon" aria-hidden="true">
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
-                <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M19 8v6M22 11h-6"/>
-              </svg>
-            </span>
-            التسجيل كعميل
-          </a>
-          <a role="menuitem" href="register.html?type=business">
-            <span class="account-menu-icon" aria-hidden="true">
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
-                <path d="M3 21h18M5 21V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2v16M9 7h1M14 7h1M9 11h1M14 11h1M9 15h1M14 15h1"/>
-              </svg>
-            </span>
-            التسجيل كمنشأة
-          </a>
-          <span class="account-menu-divider" aria-hidden="true"></span>
-          <a role="menuitem" href="login.html">
-            <span class="account-menu-icon" aria-hidden="true">
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
-                <path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4M10 17l5-5-5-5M15 12H3"/>
-              </svg>
-            </span>
-            تسجيل الدخول
-          </a>
-          <a role="menuitem" href="account.html">
-            <span class="account-menu-icon" aria-hidden="true">
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
-                <circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/>
-              </svg>
-            </span>
-            حسابي
-          </a>
+          <!-- يظهر للزائر غير المسجّل. نفس الروابط كانت تُعرض للحساب المسجّل
+               أيضاً فيبدو المستخدم كأنه خارج الحساب بعد تسجيل الدخول. -->
+          <div id="accountGuest">
+            <p class="account-menu-title">خيارات الحساب</p>
+            <a role="menuitem" href="register.html?type=customer">
+              <span class="account-menu-icon" aria-hidden="true">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M19 8v6M22 11h-6"/>
+                </svg>
+              </span>
+              التسجيل كعميل
+            </a>
+            <a role="menuitem" href="register.html?type=business">
+              <span class="account-menu-icon" aria-hidden="true">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M3 21h18M5 21V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2v16M9 7h1M14 7h1M9 11h1M14 11h1M9 15h1M14 15h1"/>
+                </svg>
+              </span>
+              التسجيل كمنشأة
+            </a>
+            <span class="account-menu-divider" aria-hidden="true"></span>
+            <a role="menuitem" href="login.html">
+              <span class="account-menu-icon" aria-hidden="true">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4M10 17l5-5-5-5M15 12H3"/>
+                </svg>
+              </span>
+              تسجيل الدخول
+            </a>
+          </div>
+          <!-- يظهر لصاحب الحساب فقط: اسمه وإجراءات حسابه وخروجه. -->
+          <div id="accountMember" hidden>
+            <p class="account-menu-title" id="accountMemberName">حسابي</p>
+            <a role="menuitem" href="account.html">
+              <span class="account-menu-icon" aria-hidden="true">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                  <circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/>
+                </svg>
+              </span>
+              حسابي
+            </a>
+            <a role="menuitem" href="orders.html">
+              <span class="account-menu-icon" aria-hidden="true">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M9 5H7a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2h-2"/><rect x="9" y="3" width="6" height="4" rx="1"/><path d="M9 12h6M9 16h4"/>
+                </svg>
+              </span>
+              طلباتي
+            </a>
+            <span class="account-menu-divider" aria-hidden="true"></span>
+            <button role="menuitem" type="button" id="accountSignOut">
+              <span class="account-menu-icon" aria-hidden="true">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4M16 17l5-5-5-5M21 12H9"/>
+                </svg>
+              </span>
+              تسجيل الخروج
+            </button>
+          </div>
         </div>
       </div>
 
@@ -669,7 +698,10 @@
   // قائمة الحساب: التسجيل مخفي من الصفحة الرئيسية ويظهر عند طلبه من الأيقونة.
   const accountToggle = document.getElementById('accountToggle');
   const accountMenu = document.getElementById('accountMenu');
-  const accountItems = () => [...accountMenu.querySelectorAll('[role="menuitem"]')];
+  /* العناصر الظاهرة فقط: القائمة تحتوي كتلة الزائر وكتلة صاحب الحساب،
+     وإحداهما مخفية، فلا يجوز أن يدخل التركيز أو تنقّل الأسهم في المخفي. */
+  const accountItems = () =>
+    [...accountMenu.querySelectorAll('[role="menuitem"]')].filter(el => el.offsetParent !== null);
 
   function closeAccountMenu(restoreFocus = false) {
     if (accountMenu.hidden) return;
@@ -729,6 +761,51 @@
 <script type="module">
 import { sb, isConfigured, adoptIdentity } from './assets/js/core.js';
 
+/* ---------- حالة القائمة: زائر أم صاحب حساب ----------
+   الصفحة الرئيسية كانت تعرض روابط التسجيل والدخول دائماً حتى لصاحب الحساب،
+   فيبدو بعد تسجيل الدخول كأنه خارج الحساب. الحالة تُقرأ من الجلسة نفسها. */
+const ACTOR_CACHE = 'hg_actor_seen';
+const ACCOUNT_LOCAL = ['hg_gift', 'hg_cart', 'hg_name', 'hg_phone', 'hg_addr'];
+
+async function renderAccountState(user) {
+  const guest = document.getElementById('accountGuest');
+  const member = document.getElementById('accountMember');
+  const nameEl = document.getElementById('accountMemberName');
+  if (!guest || !member) return;
+  guest.hidden = !!user;
+  member.hidden = !user;
+  if (!user) return;
+
+  /* الاسم من ملف الحساب؛ وعند تعذّره نكتفي ببريده بدل اسم مُلفَّق. */
+  let name = String(user.user_metadata?.full_name || '').trim();
+  try {
+    const { data } = await sb.from('profiles').select('full_name').eq('id', user.id).maybeSingle();
+    name = String(data?.full_name || name).trim();
+  } catch { /* الاسم اختياري في القائمة */ }
+  if (nameEl) nameEl.textContent = name || (user.email ? user.email.split('@')[0] : 'حسابي');
+}
+
+function wireSignOut() {
+  const btn = document.getElementById('accountSignOut');
+  if (!btn) return;
+  btn.onclick = async () => {
+    btn.disabled = true;
+    await sb.auth.signOut();
+    /* بيانات المتجر محلية على هذا الجهاز: تُنقّى مع إنهاء الجلسة */
+    ACCOUNT_LOCAL.forEach(k => { try { localStorage.removeItem(k); } catch { /* تجاهل */ } });
+    try { sessionStorage.removeItem(ACTOR_CACHE); } catch { /* تجاهل */ }
+    location.reload();
+  };
+}
+
+/* يعكس تبديل الحساب على هذا المتصفح فوراً دون إعادة تحميل.
+   النداء مؤجَّل: رد نداء حالة المصادقة يعمل داخل قفل داخلي،
+   ولا يجوز إجراء استعلام آخر إلى Supabase من داخله. */
+sb.auth.onAuthStateChange((_event, session) => {
+  const user = session?.user || null;
+  setTimeout(() => { renderAccountState(user); }, 0);
+});
+
 async function loadVisitorCount() {
   if (!isConfigured()) return;
   const metric = document.querySelector('#visitorMetric');
@@ -736,6 +813,7 @@ async function loadVisitorCount() {
   try {
     // الزائر المجهول يُسجَّل بلا معرّف؛ صاحب الحساب يُسجَّل بحسابه.
     const user = await adoptIdentity();
+    await renderAccountState(user);
     await sb.rpc('log_event', {
       p_type: 'page_view', p_device: user?.id ?? null, p_meta: { path: location.pathname }
     });
@@ -748,7 +826,13 @@ async function loadVisitorCount() {
   }
 }
 
-loadVisitorCount();
+wireSignOut();
+/* القائمة تُضبط من الجلسة مباشرة قبل العداد حتى لا تبقى على حالة الزائر
+   إن تعثّر نداء الشبكة داخل loadVisitorCount. */
+(async () => {
+  renderAccountState(await adoptIdentity().catch(() => null));
+  loadVisitorCount();
+})();
 </script>
 </body>
 </html>

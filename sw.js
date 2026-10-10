@@ -3,9 +3,9 @@
    لا يخزّن طلبات Supabase إطلاقاً (بيانات حية)
    ============================================================ */
 const BASE = new URL('./', self.location).pathname;
-/* v6: الهوية انتقلت من المتصفح إلى الحساب — رفع الإصدار يُلزم كل متصفح
-   بإسقاط النسخة القديمة من core.js/ui.js/auth-flows.js فوراً. */
-const CACHE = 'hadiya-v6';
+/* v7: قائمة الحساب في الصفحة الرئيسية تتبع الجلسة (زائر/صاحب حساب).
+   index.html مُخزَّن في SHELL، ورفع الإصدار وحده يُسقط النسخة القديمة منه. */
+const CACHE = 'hadiya-v7';
 const SHELL = [
   'index.html', 'gift.html', 'orders.html', 'account.html', 'login.html', 'register.html',
   'r/scan.html',
