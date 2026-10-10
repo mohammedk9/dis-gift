@@ -14,7 +14,8 @@ const t = (label, cond) => { cond ? pass++ : fail++; console.log((cond ? 'PASS  
 /* ---------- آخر تعريف يفوز ----------
    بعض الدوال تُعاد تعريفها في هجرات أحدث (0007 ثم 0008…)، والفحص يجب أن
    يقرأ النسخة الفعلية لا النسخة القديمة من 0003. */
-const LATER = ['0007_whatsapp', '0008_delivery', '0009_consents', '0010_loyalty', '0011_accounts']
+const LATER = ['0007_whatsapp', '0008_delivery', '0009_consents', '0010_loyalty', '0011_accounts',
+  '0012_public_offers']
   .map(n => fs.readFileSync('supabase/migrations/' + n + '.sql', 'utf8')).join('\n');
 const ALL = sql + '\n' + LATER;
 const fnBody = name => {
@@ -395,7 +396,7 @@ t('the homepage account menu tracks the session (guest vs. member)',
 // ---- structural completeness: catch truncated CREATE TABLE / files ----
 const SRC = ['0001_schema', '0002_rls', '0003_functions', '0004_seed', '0005_site_visitors',
   '0006_admin_bootstrap', '0007_whatsapp', '0008_delivery', '0009_consents', '0010_loyalty',
-  '0011_accounts'];
+  '0011_accounts', '0012_public_offers'];
 console.log('\n--- structural completeness ---');
 for (const n of SRC) {
   const raw = fs.readFileSync('supabase/migrations/' + n + '.sql', 'utf8');

@@ -269,6 +269,30 @@
   }
   .gc-cta:hover{transform:translateY(-2px);box-shadow:0 16px 30px -12px rgba(0,0,0,.45)}
   .gc-line{position:relative;z-index:1;width:100%;height:1px;background:rgba(255,255,255,.3);margin:26px 0 16px}
+
+  /* قائمة العروض النشطة داخل بطاقة الهدية — للزائر والمستخدم معاً */
+  .gc-offers{
+    position:relative;z-index:1;width:100%;margin-top:16px;
+    display:flex;flex-direction:column;gap:8px;
+    max-height:186px;overflow-y:auto;
+  }
+  .gc-offer{
+    display:flex;align-items:center;gap:10px;
+    background:rgba(255,255,255,.16);
+    border:1px solid rgba(255,255,255,.24);
+    border-radius:13px;padding:9px 12px;
+  }
+  .gc-offer-ico{
+    flex:none;width:30px;height:30px;border-radius:10px;
+    display:grid;place-items:center;
+    background:rgba(255,255,255,.22);color:#fff;
+  }
+  .gc-offer-txt{min-width:0;display:flex;flex-direction:column;line-height:1.45}
+  .gc-offer-name{font-size:13px;font-weight:600;color:#fff;
+    white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .gc-offer-kind{font-size:11.5px;color:rgba(255,255,255,.85);
+    white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .gc-offers-note{position:relative;z-index:1;margin:8px 0 0;font-size:12px;color:rgba(255,255,255,.85)}
   .gc-foot{
     position:relative;z-index:1;
     width:100%;display:flex;justify-content:space-between;
@@ -485,6 +509,16 @@
               </span>
               طلباتي
             </a>
+            <!-- لصاحب المنشأة فقط: رابط لوحته. يُخفى لبقية الحسابات. -->
+            <a role="menuitem" href="r/" id="accountBizLink" hidden>
+              <span class="account-menu-icon" aria-hidden="true">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M3 21h18M5 21V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2v16M9 7h1M14 7h1M9 11h1M14 11h1M9 15h1M14 15h1"/>
+                </svg>
+              </span>
+              <span id="accountBizName">لوحة منشأتي</span>
+            </a>
+
             <span class="account-menu-divider" aria-hidden="true"></span>
             <button role="menuitem" type="button" id="accountSignOut">
               <span class="account-menu-icon" aria-hidden="true">
@@ -562,8 +596,12 @@
         </svg>
       </div>
 
-      <p class="gc-sub">جاهزة لك في بريدة</p>
-      <p class="gc-title">هدية اليوم</p>
+      <p class="gc-sub" id="gcSub">جاهزة لك في بريدة</p>
+      <p class="gc-title" id="gcTitle">هدية اليوم</p>
+
+      <!-- العروض النشطة تُعرض للزائر من public_offers() — بلا قيمة ولا كود.
+           الفتح (open_daily_gift) وحده يتطلب حساباً. -->
+      <div class="gc-offers" id="gcOffers" hidden></div>
 
       <button class="gc-cta" type="button" onclick="location.href='gift.html'">
         <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round">
@@ -778,11 +816,37 @@ async function renderAccountState(user) {
 
   /* الاسم من ملف الحساب؛ وعند تعذّره نكتفي ببريده بدل اسم مُلفَّق. */
   let name = String(user.user_metadata?.full_name || '').trim();
+
+  /* صاحب منشأة: نقرأ منشأته لنعرض رابط لوحته بدل روابط التسجيل.
+     بدون ذلك يظهر صاحب المنشأة كأنه غير مسجّل بعد الدخول. */
+  let restaurantId = null;
+  let restaurantName = '';
   try {
-    const { data } = await sb.from('profiles').select('full_name').eq('id', user.id).maybeSingle();
+    const { data } = await sb.from('profiles')
+      .select('full_name, role').eq('id', user.id).maybeSingle();
     name = String(data?.full_name || name).trim();
-  } catch { /* الاسم اختياري في القائمة */ }
+
+    if (data?.role === 'restaurant') {
+      const { data: staff } = await sb.from('restaurant_staff')
+        .select('restaurant_id').eq('user_id', user.id).limit(1).maybeSingle();
+      if (staff?.restaurant_id) {
+        restaurantId = staff.restaurant_id;
+        const { data: rest } = await sb.from('restaurants')
+          .select('name').eq('id', staff.restaurant_id).maybeSingle();
+        restaurantName = String(rest?.name || '').trim();
+      }
+    }
+  } catch { /* الاسم والمنشأة اختيارية في القائمة */ }
+
   if (nameEl) nameEl.textContent = name || (user.email ? user.email.split('@')[0] : 'حسابي');
+
+  /* رابط لوحة المنشأة يظهر لصاحب منشأة فقط. */
+  const bizLink = document.getElementById('accountBizLink');
+  if (bizLink) {
+    bizLink.hidden = !restaurantId;
+    const bizName = document.getElementById('accountBizName');
+    if (bizName) bizName.textContent = restaurantName || 'لوحة منشأتي';
+  }
 }
 
 function wireSignOut() {
@@ -832,6 +896,58 @@ wireSignOut();
 (async () => {
   renderAccountState(await adoptIdentity().catch(() => null));
   loadVisitorCount();
+
+async function loadPublicOffers() {
+  if (!isConfigured()) return;
+  const container = document.getElementById('gcOffers');
+  if (!container) return;
+
+  try {
+    const { data } = await sb.rpc('public_offers', { p_area: areaId() || null });
+    if (!Array.isArray(data) || !data.length) {
+      // لا عروض نشطة — البطاقة تبقى على حالتها الأصلية (هدية اليوم)
+      return;
+    }
+
+    /* نعرض أول 3 عروض فقط (المحتوى يُختار ديناميكياً من النشطة) */
+    const offers = data.slice(0, 3);
+    const icon = (name) => {
+      const svg = (inner, s = 16, sw = 1.5) =>
+        `<svg width="${s}" height="${s}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="${sw}" stroke-linecap="round" stroke-linejoin="round">${inner}</svg>`;
+      const icons = {
+        percent: svg('<circle cx="12" cy="12" r="9"/><path d="M8 8l8 8M16 8l-8 8"/>'),
+        fixed_amount: svg('<rect x="3" y="8" width="18" height="4" rx="1"/><path d="M12 8v13"/>'),
+        free_item: svg('<rect x="3" y="8" width="18" height="4" rx="1"/><path d="M19 12v7a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2v-7"/><path d="M7.5 8a2.5 2.5 0 0 1 0-5C11 3 12 8 12 8s1-5 4.5-5a2.5 2.5 0 0 1 0 5"/>')
+      };
+      return icons[name] || icons.free_item;
+    };
+
+    container.innerHTML = offers.map(o => {
+      const kindLabel = {
+        percent: `خصم ${o.offer.kind === 'percent' ? '↑' : ''}`,
+        fixed_amount: 'مبلغ ثابت',
+        free_item: 'صنف مجاني'
+      }[o.offer.kind] || 'هدية';
+
+      return `<div class="gc-offer">
+        <div class="gc-offer-ico">${icon(o.offer.kind)}</div>
+        <div class="gc-offer-txt">
+          <div class="gc-offer-name">${esc(o.restaurant)}</div>
+          <div class="gc-offer-kind">${esc(o.offer.title.slice(0, 24))}</div>
+        </div>
+      </div>`;
+    }).join('');
+
+    container.hidden = false;
+    document.getElementById('gcTitle').textContent = 'عروضك اليومية';
+    document.getElementById('gcSub').textContent = offers.length + ' عرض متاح';
+  } catch {
+    // لا نعرض رسالة خطأ — البطاقة تبقى كما هي
+  }
+}
+
+loadPublicOffers();
+
 })();
 </script>
 </body>
