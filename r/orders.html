@@ -11,7 +11,7 @@
 </head>
 <body>
 <header class="nav"><div class="container nav-inner">
-  <a class="brand" href="./"><span class="brand-mark">🎁</span>
+  <a class="brand" href="./"><span class="brand-mark"><svg class="ico" width="20" height="20" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M9 2c-1.1 0-2 .9-2 2v2h10V4c0-1.1-.9-2-2-2h-6zM4 7v11c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V7H4zm3 4h2v5H7v-5zm4 0h2v5h-2v-5zm4 0h2v5h-2v-5z"/></svg></span>
     <span><span class="brand-name">هدية</span><br><span class="brand-sub">الطلبات</span></span></a>
   <span class="nav-spacer"></span>
   <button class="btn btn-ghost btn-sm" id="refresh">تحديث</button>
@@ -67,7 +67,7 @@ async function load() {
         `<a class="tab ${filter===k?'active':''}" href="?f=${k}">${l}</a>`).join('')}
     </div>
     ${orders.length ? orders.map(o => card(o)).join('')
-      : '<div class="empty"><div class="empty-ico">📭</div><p>لا توجد طلبات.</p></div>'}`;
+      : '<div class="empty"><div class="empty-ico"><svg class="ico" width="40" height="40" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M22 12h-6l-2 3h-4l-2-3H2" fill="none" stroke="currentColor" stroke-width="2"/><path d="M5.5 5.1 2 12v6a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-6l-3.5-6.9A2 2 0 0 0 16.7 4H7.3a2 2 0 0 0-1.8 1.1z" fill="none" stroke="currentColor" stroke-width="2"/></svg></div><p>لا توجد طلبات.</p></div>'}`;
 
   $('#app').querySelectorAll('[data-act]').forEach(b => b.onclick = () => act(b));
   $('#app').querySelectorAll('[data-share]').forEach(b =>
@@ -81,7 +81,7 @@ function card(o) {
     new:      [['accepted','قبول'], ['cancelled','رفض']],
     accepted: [['preparing','بدء التجهيز'], ['cancelled','إلغاء']],
     preparing:[['ready','جاهز'], ['cancelled','إلغاء']],
-    ready:    [['completed','✅ تم التسليم'], ['no_show','لم يحضر']],
+    ready:    [['completed','تم التسليم'], ['no_show','لم يحضر']],
     completed:[], cancelled:[], no_show:[]
   }[o.status] || [];
   // لا قبول قبل تأكيد العميل للسعر (يشمل رسوم التوصيل) — الرفض يبقى متاحاً
@@ -119,8 +119,8 @@ function card(o) {
         o.points_status === 'pending' ? ' (تُعتمد عند الاكتمال)' : ''}</span>` : ''}
     </div>
 
-    ${o.address ? `<p class="small muted mt">📍 ${esc(o.address)}</p>` : ''}
-    ${o.note ? `<p class="small muted">📝 ${esc(o.note)}</p>` : ''}
+    ${o.address ? `<p class="small muted mt">${esc(o.address)}</p>` : ''}
+    ${o.note ? `<p class="small muted">${esc(o.note)}</p>` : ''}
 
     <div class="mt" style="border-top:1px solid var(--line);padding-top:10px">
       ${o.items.map(i => `<div class="between small" style="padding:3px 0">
@@ -142,10 +142,10 @@ function card(o) {
 
     <div class="flex mt" style="gap:8px">
       <button class="btn btn-ghost btn-sm grow" data-share="${o.id}">
-        💬 إرسال الفاتورة للعميل</button>
+        إرسال الفاتورة للعميل</button>
       ${rsettings.points_enabled && !o.points && !['cancelled','no_show'].includes(o.status)
         ? `<button class="btn btn-ghost btn-sm grow" data-points="${o.id}">
-            ⭐ منح ${rsettings.points_per_order || 0} نقطة</button>` : ''}
+            منح ${rsettings.points_per_order || 0} نقطة</button>` : ''}
     </div>
   </div>`;
 }
@@ -177,7 +177,7 @@ async function go(id, to, note) {
       ? 'لا يمكن الانتقال إلى هذه الحالة' : 'تعذّر تحديث الطلب');
   }
   toast(to === 'completed'
-    ? `✅ تم — رسوم المنصة على هذا الطلب: ${sar(data.platform_fee)}`
+    ? `تم — رسوم المنصة على هذا الطلب: ${sar(data.platform_fee)}`
     : 'تم التحديث');
   await load();
 }
@@ -196,8 +196,8 @@ async function grantPoints(id) {
   const { data, error } = await sb.rpc('staff_grant_points', { p_order: id, p_points: null });
   if (error || !data?.ok) return toast(ERRORS[data?.error] || 'تعذّر منح النقاط');
   toast(data.status === 'applied'
-    ? `⭐ أُضيفت ${data.points} نقطة إلى رصيد العميل`
-    : `⭐ ${data.points} نقطة معلَّقة — تُعتمد عند اكتمال الطلب`);
+    ? `أُضيفت ${data.points} نقطة إلى رصيد العميل`
+    : `${data.points} نقطة معلَّقة — تُعتمد عند اكتمال الطلب`);
   await load();
 }
 

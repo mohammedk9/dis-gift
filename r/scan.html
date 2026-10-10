@@ -17,7 +17,7 @@
 </head>
 <body>
 <header class="nav"><div class="container nav-inner">
-  <a class="brand" href="./"><span class="brand-mark">🎁</span>
+  <a class="brand" href="./"><span class="brand-mark"><svg class="ico" width="20" height="20" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M9 2c-1.1 0-2 .9-2 2v2h10V4c0-1.1-.9-2-2-2h-6zM4 7v11c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V7H4zm3 4h2v5H7v-5zm4 0h2v5h-2v-5zm4 0h2v5h-2v-5z"/></svg></span>
     <span><span class="brand-name">هدية</span><br><span class="brand-sub">مسح الباركود</span></span></a>
 </div></header>
 <div id="tabs"></div>
@@ -58,7 +58,7 @@ const NEXT = {
   new:      [['accepted','قبول'], ['cancelled','رفض']],
   accepted: [['preparing','بدء التجهيز'], ['cancelled','إلغاء']],
   preparing:[['ready','جاهز'], ['cancelled','إلغاء']],
-  ready:    [['completed','✅ تم التسليم'], ['no_show','لم يحضر']],
+  ready:    [['completed','تم التسليم'], ['no_show','لم يحضر']],
   completed:[], cancelled:[], no_show:[]
 };
 
@@ -100,7 +100,7 @@ function pointsLine(p, s) {
         value="${Number(s.points_per_order || 0)}" placeholder="عدد النقاط"></div>
     <p class="hint">الحد الأعلى لكل طلب: ${Number(s.points_max_per_order || s.points_cap || 0)} نقطة.
       تُمنح مرة واحدة لكل طلب، ولا تُعتمد إلا عند اكتماله.</p>
-    <button class="btn btn-primary btn-block" id="grant">⭐ منح النقاط</button>`;
+    <button class="btn btn-primary btn-block" id="grant">منح النقاط</button>`;
 }
 
 function orderCard(res) {
@@ -130,8 +130,8 @@ function orderCard(res) {
       ${blocked ? '<span class="badge badge-orange">بانتظار تأكيد العميل للسعر</span>' : ''}
     </div>
 
-    ${o.address ? `<p class="small muted mt">📍 ${esc(o.address)}</p>` : ''}
-    ${o.note ? `<p class="small muted">📝 ${esc(o.note)}</p>` : ''}
+    ${o.address ? `<p class="small muted mt">${esc(o.address)}</p>` : ''}
+    ${o.note ? `<p class="small muted">${esc(o.note)}</p>` : ''}
 
     <div class="mt" style="border-top:1px solid var(--line);padding-top:10px">
       ${o.items.map(i => `<div class="between small" style="padding:3px 0">
@@ -184,8 +184,8 @@ async function grant() {
   });
   if (error || !data?.ok) return toast(ERRORS[data?.error] || 'تعذّر منح النقاط');
   toast(data.status === 'applied'
-    ? `⭐ أُضيفت ${data.points} نقطة إلى رصيد العميل`
-    : `⭐ ${data.points} نقطة معلَّقة — تُعتمد عند اكتمال الطلب`);
+    ? `أُضيفت ${data.points} نقطة إلى رصيد العميل`
+    : `${data.points} نقطة معلَّقة — تُعتمد عند اكتمال الطلب`);
   await lookup(current.order.code);
 }
 
@@ -195,7 +195,7 @@ async function advance(to) {
     { p_order: current.order.id, p_to: to, p_note: null });
   if (error || !data?.ok) return toast(ERRORS[data?.error] || 'تعذّر تحديث الطلب');
   toast(to === 'completed'
-    ? `✅ تم التسليم — ${data.points || 0} نقطة للعميل، ورسوم المنصة ${sar(data.platform_fee)}`
+    ? `تم التسليم — ${data.points || 0} نقطة للعميل، ورسوم المنصة ${sar(data.platform_fee)}`
     : 'تم التحديث');
   await lookup(current.order.code);
 }

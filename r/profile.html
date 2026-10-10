@@ -11,7 +11,7 @@
 </head>
 <body>
 <header class="nav"><div class="container nav-inner">
-  <a class="brand" href="./"><span class="brand-mark">🎁</span>
+  <a class="brand" href="./"><span class="brand-mark"><svg class="ico" width="20" height="20" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M9 2c-1.1 0-2 .9-2 2v2h10V4c0-1.1-.9-2-2-2h-6zM4 7v11c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V7H4zm3 4h2v5H7v-5zm4 0h2v5h-2v-5zm4 0h2v5h-2v-5z"/></svg></span>
     <span><span class="brand-name">هدية</span><br><span class="brand-sub">ملف المنشأة</span></span></a>
 </div></header>
 <div id="tabs"></div>
@@ -59,8 +59,8 @@ $('#app').innerHTML = `
   <div class="card">
     <div class="field"><label class="label">نوع النشاط</label>
       <select class="input" id="f_biz">
-        ${[['restaurant','🍽️ مطعم'],['cafe','☕ كافيه'],['salon','💇 صالون'],
-           ['store','🏪 متجر'],['services','🛠️ خدمات'],['other','📦 أخرى']]
+        ${[['restaurant','مطعم'],['cafe','كافيه'],['salon','صالون'],
+           ['store','متجر'],['services','خدمات'],['other','أخرى']]
           .map(([v, l]) => `<option value="${v}" ${r?.business_type === v ? 'selected' : ''}
             >${l}</option>`).join('')}
       </select>
@@ -227,7 +227,7 @@ $('#save').onclick = async () => {
   $('#f_ppoints').value = Number(pts.points_per_order);
   $('#f_pmax').value = Number(pts.points_max_per_order);
 
-  toast('✅ تم الحفظ');
+  toast('تم الحفظ');
 };
 
 /* الرسوم تُحرَّر فقط عند تفعيل التوصيل */

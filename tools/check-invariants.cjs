@@ -96,7 +96,7 @@ t('admin can add neighborhoods', /areas_admin_write/.test(rls));
 t('restaurant scoped to own restaurant_id', /public\.is_staff_of\(restaurant_id\)/.test(rls));
 
 const seed = fs.readFileSync(SEED, 'utf8');
-t('platform_fee defaults to 0 (no invented value)', /'platform_fee', '0'::jsonb/.test(seed));
+t('platform_fee is a percentage of the order (1% default)', /'platform_fee', '1'::jsonb/.test(seed));
 t('seed declares its assumptions', /ASSUMPTION/.test(seed));
 
 // ---- WhatsApp: قناة توصيل للفاتورة، وليست مساراً يتجاوز النظام ----
@@ -304,6 +304,10 @@ t('points are absent from the money maths (fees and net unchanged)',
   /'revenue', \(select coalesce\(sum\(platform_fee\),0\)/.test(D10));
 t('points are accrual/display only — no redemption path exists',
   /'redeemable', false/.test(D10) && !/points_redeem|redeem_points/.test(D10));
+t('the fee is a share of the order value, never a flat amount',
+  /round\(v_base \* coalesce\(\(public\.cfg\('platform_fee'\)[\s\S]*?\) \/ 100, 2\)/.test(tr10));
+t('daily-gift unique constraint is re-runnable (guarded, not exception-based)',
+  /if not exists \(\s*select 1 from pg_constraint[\s\S]*?conname = 'daily_gifts_code_key'/.test(WA));
 
 t('the barcode reuses the order code (no second code is generated)',
   /'code', o\.code/.test(sc10) && !/barcode_code|new_barcode_code/.test(D10));

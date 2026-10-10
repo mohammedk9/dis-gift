@@ -392,7 +392,7 @@ begin
   if p_to = 'completed' then
     -- الأساس: قيمة الطلب بلا رسوم التوصيل ⇒ رسوم المنصة لا تُحسب على التوصيل
     v_base := greatest(round(ord.order_total - ord.delivery_fee, 2), 0);
-    v_fee := coalesce((public.cfg('platform_fee') #>> '{}')::numeric, 0);
+    v_fee := round(v_base * coalesce((public.cfg('platform_fee') #>> '{}')::numeric, 1) / 100, 2);
     v_fee := greatest(least(v_fee, v_base), 0);   -- لا رسوم أكبر من قيمة الطلب بلا توصيل
     v_net  := round(ord.order_total - v_fee, 2);  -- رسوم التوصيل تُحصَّل للمنشأة كاملة
     v_period := to_char(public.now_riyadh(), 'YYYY-MM');
@@ -631,7 +631,7 @@ begin
                round(it.line_total, 2)::text || ' ر.س' || E'\n';
   end loop;
 
-  v_out := '🎁 ' || p_title || E'\n' ||
+  v_out := p_title || E'\n' ||
            r.name || E'\n' ||
            'رقم الطلب: ' || o.code || E'\n' ||
            to_char(o.created_at at time zone 'Asia/Riyadh', 'YYYY-MM-DD HH24:MI') || E'\n' ||

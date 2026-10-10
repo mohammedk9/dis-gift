@@ -18,11 +18,11 @@
 <body>
 <header class="nav"><div class="container nav-inner">
   <a class="brand" href="index.html">
-    <span class="brand-mark">🎁</span>
+    <span class="brand-mark"><svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M9 2c-1.1 0-2 .9-2 2v2h10V4c0-1.1-.9-2-2-2h-6zM4 7v11c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V7H4zm3 4h2v5H7v-5zm4 0h2v5h-2v-5zm4 0h2v5h-2v-5z"/></svg></span>
     <span><span class="brand-name">هدية</span><br><span class="brand-sub">اكتشف · اطلب</span></span>
   </a>
   <span class="nav-spacer"></span>
-  <button class="btn btn-ghost btn-sm" id="areaBtn">📍 <span id="areaLabel">كل بريدة</span></button>
+  <button class="btn btn-ghost btn-sm" id="areaBtn"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg> <span id="areaLabel">كل بريدة</span></button>
 </div></header>
 
 <main class="container page" id="app">
@@ -58,7 +58,7 @@ function renderAreaLabel() {
 }
 $('#areaBtn').onclick = () => {
   const close = modal(`
-    <h3 class="modal-title">📍 اختر حيّك</h3>
+    <h3 class="modal-title"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="display:inline;margin-left:4px;vertical-align:text-bottom" aria-hidden="true"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg> اختر حيّك</h3>
     <p class="hint mb">نستخدم الحي لعرض مطاعم وعروض قريبة منك فقط.</p>
     <label class="check"><input type="radio" name="ar" value="" ${areaId() ? '' : 'checked'}> كل بريدة</label>
     ${areas.map(a => `<label class="check"><input type="radio" name="ar" value="${a.id}"
@@ -75,8 +75,8 @@ function stageClosed() {
   return `
     <div class="card" style="background:linear-gradient(135deg,#f59653,#e5551f);color:#fff;border:0">
       <div class="center">
-        <div style="font-size:56px;line-height:1;margin-bottom:6px">🎁</div>
-        <h1 style="font-size:24px;font-weight:700;margin:0">🎁 هدية اليوم</h1>
+        <div style="font-size:56px;line-height:1;margin-bottom:6px"><svg width="56" height="56" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M9 2c-1.1 0-2 .9-2 2v2h10V4c0-1.1-.9-2-2-2h-6zM4 7v11c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V7H4zm3 4h2v5H7v-5zm4 0h2v5h-2v-5zm4 0h2v5h-2v-5z"/></svg></div>
+        <h1 style="font-size:24px;font-weight:700;margin:0"><svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor" style="display:inline;margin-left:4px;vertical-align:text-bottom" aria-hidden="true"><path d="M9 2c-1.1 0-2 .9-2 2v2h10V4c0-1.1-.9-2-2-2h-6zM4 7v11c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V7H4zm3 4h2v5H7v-5zm4 0h2v5h-2v-5zm4 0h2v5h-2v-5z"/></svg> هدية اليوم</h1>
         <p style="margin:8px 0 0;opacity:.9;font-size:14px">
           كل يوم لك هدية من منشأة قريبة منك. قيمة الهدية تُكشف عند الفتح فقط.</p>
         <div style="height:1px;background:rgba(255,255,255,.3);margin:20px 0 14px"></div>
@@ -93,13 +93,13 @@ function stageClosed() {
           <div class="small muted">افتح · اكتشف · اطلب مباشرة</div>
         </div>
         <span class="badge badge-orange">بلا تسجيل</span>
-${[[1,'🎁','افتح هدية واحدة كل يوم'],
-           [2,'🏪','تظهر لك هدية من منشأة قريبة'],
-           [3,'🛒','اطلب من قائمتها مباشرة'],
-           [4,'💵','الدفع يتم مباشرة مع المنشأة']].map(([n,ico,t]) => `
+${[[1,'<svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor"><path d="M9 2c-1.1 0-2 .9-2 2v2h10V4c0-1.1-.9-2-2-2h-6zM4 7v11c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V7H4zm3 4h2v5H7v-5zm4 0h2v5h-2v-5zm4 0h2v5h-2v-5z"/></svg>','افتح هدية واحدة كل يوم'],
+           [2,'<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>','تظهر لك هدية من منشأة قريبة'],
+           [3,'<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="9" cy="21" r="1"/><circle cx="20" cy="21" r="1"/><path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"/></svg>','اطلب من قائمتها مباشرة'],
+           [4,'<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 1v22M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>','الدفع يتم مباشرة مع المنشأة']].map(([n,ico,t]) => `
           <div class="flex" style="gap:10px;align-items:center">
             <span style="width:30px;height:30px;border-radius:9px;background:var(--peach);
-              color:var(--orange-deep);display:grid;place-items:center">${ico}</span>
+              color:var(--orange-deep);display:grid;place-items:center;font-size:0">${ico}</span>
             <span class="small">${t}</span>
             <span class="nav-spacer badge">${n}</span>
           </div>`).join('')}
@@ -110,7 +110,7 @@ ${[[1,'🎁','افتح هدية واحدة كل يوم'],
 function stageNoOffer() {
   return `
     <div class="card center">
-      <div style="font-size:44px">⏳</div>
+      <div style="font-size:44px"><svg width="44" height="44" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><path d="M6 2h12M6 2a1 1 0 0 0-1 1v3h14V3a1 1 0 0 0-1-1M6 5h12M9 9v7a3 3 0 0 0 6 0V9M7 16h10"/></svg></div>
       <h2 style="font-size:19px;font-weight:700;margin:10px 0 4px">لا توجد هدية متاحة حالياً</h2>
       <p class="muted small">حاول لاحقاً. قد تكون عروض اليوم قد انتهت أو أن المنشآت القريبة
         نفدت من عروضها.</p>
@@ -124,7 +124,7 @@ function stageOpened(d) {
   // الهدية قد تكون: خصم % / مبلغ ثابت / صنف مجاني
   let bigValue, bigUnit, headline;
   if (g.kind === 'free_item') {
-    bigValue = '🎁';
+    bigValue = '<svg class="ico" width="36" height="36" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M9 2c-1.1 0-2 .9-2 2v2h10V4c0-1.1-.9-2-2-2h-6zM4 7v11c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V7H4zm3 4h2v5H7v-5zm4 0h2v5h-2v-5zm4 0h2v5h-2v-5z"/></svg>';
     bigUnit = '';
     headline = g.gift_label || 'صنف مجاني';
   } else if (g.kind === 'fixed_amount') {
@@ -139,8 +139,8 @@ function stageOpened(d) {
 
   return `
     <div class="reveal">
-      <div class="gift-box">🎁</div>
-      <p class="small muted" style="margin:0">🎁 هديتك اليوم</p>
+      <div class="gift-box"><svg width="46" height="46" viewBox="0 0 24 24" fill="white"><path d="M9 2c-1.1 0-2 .9-2 2v2h10V4c0-1.1-.9-2-2-2h-6zM4 7v11c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V7H4zm3 4h2v5H7v-5zm4 0h2v5h-2v-5zm4 0h2v5h-2v-5z"/></svg></div>
+      <p class="small muted" style="margin:0"><svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" style="display:inline;margin-left:4px;vertical-align:text-bottom" aria-hidden="true"><path d="M9 2c-1.1 0-2 .9-2 2v2h10V4c0-1.1-.9-2-2-2h-6zM4 7v11c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V7H4zm3 4h2v5H7v-5zm4 0h2v5h-2v-5zm4 0h2v5h-2v-5z"/></svg> هديتك اليوم</p>
       <div class="discount-value">${bigValue}
         ${bigUnit ? `<span style="font-size:24px">${bigUnit}</span>` : ''}</div>
       <p style="margin:2px 0 0;font-weight:600">${headline}</p>
@@ -151,7 +151,7 @@ function stageOpened(d) {
         ${r.logo_url ? `<img src="${esc(r.logo_url)}" alt=""
             style="width:56px;height:56px;border-radius:14px;object-fit:cover;flex:none">`
           : `<div style="width:56px;height:56px;border-radius:14px;background:var(--peach);
-              color:var(--orange-deep);display:grid;place-items:center;font-size:24px;flex:none">🏪</div>`}
+              color:var(--orange-deep);display:grid;place-items:center;font-size:0;flex:none"><svg class="ico" width="24" height="24" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" stroke="currentColor" stroke-width="2"/><polyline points="9 22 9 12 15 12 15 22" stroke="currentColor" stroke-width="2"/></svg></div>`}
         <div class="grow">
           <div style="font-weight:700;font-size:16px">${esc(r.name)}</div>
           <div class="small muted">${esc(r.address || 'بريدة')}</div>
@@ -162,7 +162,7 @@ function stageOpened(d) {
       ${o.description ? `<p class="small muted">${esc(o.description)}</p>` : ''}
 
       ${g.kind === 'free_item' ? `<div class="alert alert-ok mt">
-        ✅ ستُضاف هديتك للطلب تلقائياً عند إتمام الطلب.
+        <svg class="ico" width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden="true"><circle cx="12" cy="12" r="10" fill="currentColor"/><path d="m8.5 12.5 2.5 2.5 4.5-5" stroke="#fff" stroke-width="2"/></svg> ستُضاف هديتك للطلب تلقائياً عند إتمام الطلب.
         ${g.gift_label ? '<br><b>' + esc(g.gift_label) + '</b>' : ''}</div>` : ''}
 
       <div class="flex mt" style="gap:8px;flex-wrap:wrap">
@@ -219,12 +219,12 @@ async function open() {
   setGift(data);
   stage.innerHTML = stageOpened(data);
   wire(data);
-  toast('🎁 لديك هدية اليوم!');
+  toast('لديك هدية اليوم!');
 }
 
 function stageError(msg) {
   return `<div class="card center">
-    <div style="font-size:40px">⚠️</div>
+    <div style="font-size:40px"><svg class="ico" width="40" height="40" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M1 21h22L12 2 1 21zm12-3h-2v-2h2v2zm0-4h-2v-4h2v4z"/></svg></div>
     <h2 style="font-size:18px;font-weight:700;margin:10px 0 4px">${esc(msg)}</h2>
     <button class="btn btn-ghost mt" onclick="location.reload()">إعادة المحاولة</button>
   </div>`;

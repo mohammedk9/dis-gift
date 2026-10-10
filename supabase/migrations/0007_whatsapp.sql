@@ -63,9 +63,18 @@ end $$;
 alter table public.daily_gifts add column if not exists code text;
 
 -- القيد الفريد أولاً (يسمح بـ NULL) حتى يتعذّر أي تكرار أثناء تعبئة الصفوف القديمة
+-- ملاحظة: قيد UNIQUE يُنشئ فهرساً بنفس الاسم، وإعادة تشغيل الهجرة تُطلق
+--         duplicate_table (42P07) لا duplicate_object (42710) كما في قيود CHECK.
+--         لذلك نتحقّق من الكتالوج أولاً فتصبح الهجرة قابلة لإعادة التشغيل.
 do $$ begin
-  alter table public.daily_gifts add constraint daily_gifts_code_key unique (code);
-exception when duplicate_object then null; end $$;
+  if not exists (
+    select 1 from pg_constraint
+    where conrelid = 'public.daily_gifts'::regclass
+      and conname = 'daily_gifts_code_key'
+  ) then
+    alter table public.daily_gifts add constraint daily_gifts_code_key unique (code);
+  end if;
+end $$;
 
 -- تعبئة الكود للصفوف القديمة: نحفظ المعرّفات أولاً ثم كل صف يُعاد المحاولة عليه حتى ينجح
 do $$
@@ -213,7 +222,7 @@ begin
                round(it.line_total, 2)::text || ' ر.س' || E'\n';
   end loop;
 
-  v_out := '🎁 ' || p_title || E'\n' ||
+  v_out := p_title || E'\n' ||
            r.name || E'\n' ||
            'رقم الطلب: ' || o.code || E'\n' ||
            to_char(o.created_at at time zone 'Asia/Riyadh', 'YYYY-MM-DD HH24:MI') || E'\n' ||

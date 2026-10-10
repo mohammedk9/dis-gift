@@ -12,7 +12,7 @@
 <body>
 <header class="nav"><div class="container nav-inner">
   <a class="brand" href="menu.html">
-    <span class="brand-mark">🎁</span>
+    <span class="brand-mark"><svg class="ico" width="20" height="20" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M9 2c-1.1 0-2 .9-2 2v2h10V4c0-1.1-.9-2-2-2h-6zM4 7v11c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V7H4zm3 4h2v5H7v-5zm4 0h2v5h-2v-5zm4 0h2v5h-2v-5z"/></svg></span>
     <span><span class="brand-name">هدية</span><br><span class="brand-sub">إتمام الطلب</span></span>
   </a>
   <span class="nav-spacer"></span>
@@ -74,11 +74,11 @@ $('#app').innerHTML = `
     <p class="page-sub">${esc(R.name)}</p>
   </div>
 
-  <div class="alert alert-info">💵 الدفع يتم مباشرة مع المنشأة — عند الاستلام أو عند توصيلها.
+  <div class="alert alert-info">الدفع يتم مباشرة مع المنشأة — عند الاستلام أو عند توصيلها.
     لا يتم أي دفع إلكتروني عبر المنصة.</div>
 
   <div class="card">
-    <h3 class="section-title" style="margin-top:0;font-size:15px">1️⃣ طريقة الاستلام</h3>
+    <h3 class="section-title" style="margin-top:0;font-size:15px">طريقة الاستلام</h3>
     <label class="check"><input type="radio" name="otype" value="pickup"
       ${R.pickup_enabled ? 'checked' : ''} ${R.pickup_enabled ? '' : 'disabled'}>
       <span><b>استلام من المنشأة</b><br><span class="small muted">اختر وقت الاستلام</span></span></label>
@@ -103,7 +103,7 @@ $('#app').innerHTML = `
   </div>
 
   <div class="card mt">
-    <h3 class="section-title" style="margin-top:0;font-size:15px">2️⃣ بيانات التواصل</h3>
+    <h3 class="section-title" style="margin-top:0;font-size:15px">بيانات التواصل</h3>
     <div class="field"><label class="label">الاسم</label>
       <input class="input" id="cname" value="${esc(profileName)}" placeholder="اسمك الكامل"></div>
     <div class="row2">
@@ -127,7 +127,7 @@ $('#app').innerHTML = `
   </div>
 
   <div class="card mt">
-    <h3 class="section-title" style="margin-top:0;font-size:15px">3️⃣ الموافقات</h3>
+    <h3 class="section-title" style="margin-top:0;font-size:15px">الموافقات</h3>
     <label class="check" id="c1Box"><input type="checkbox" id="c1">
       <span>أوافق على مشاركة رقم جوالي مع المنشأة <b>للتواصل بخصوص هذا الطلب فقط</b>.</span></label>
     <p class="hint" id="c1Hint">مطلوبة للتوصيل فقط — المندوب يحتاج رقمك ليصلك.</p>
@@ -148,14 +148,14 @@ $('#app').innerHTML = `
     <div class="between" id="feeRow" style="color:var(--orange-deep);display:none">
       <span>رسوم التوصيل</span><span id="feeVal">+ ${sar(DELIVERY_FEE)}</span></div>
     ${gift.gift.kind === 'free_item' ? `<div class="alert alert-info mt">
-      🎁 ${esc(gift.gift.gift_label || 'الصنف المجاني')} سيُضاف للطلب تلقائياً وسعره صفر.</div>` : ''}
+      ${esc(gift.gift.gift_label || 'الصنف المجاني')} سيُضاف للطلب تلقائياً وسعره صفر.</div>` : ''}
     <div class="between" style="font-weight:700;font-size:18px;border-top:1px solid var(--line);
       padding-top:10px;margin-top:6px">
       <span>المطلوب دفعه</span><span id="sumTotal">${sar(total)}</span></div>
     ${gift.gift.code ? `<div class="between small muted" style="margin-top:6px">
       <span>كود هديتك</span><span dir="ltr">${esc(gift.gift.code)}</span></div>` : ''}
     ${R.points_enabled && Number(R.points_per_order) > 0 ? `<div class="alert alert-info mt">
-      ⭐ عند اكتمال هذا الطلب تمنحك ${esc(R.name)} ${Number(R.points_per_order)} نقطة،
+      عند اكتمال هذا الطلب تمنحك ${esc(R.name)} ${Number(R.points_per_order)} نقطة،
       وتظهر في رصيدك بعد أن يؤكد الموظف التسليم بمسح باركود الطلب.</div>` : ''}
     <p class="hint">بعد إنشاء الطلب يمكنك إرسال الفاتورة إلى واتساب المنشأة — نفس الأرقام ونفس الكود.
       ${DELIVERY_FEE > 0 ? 'ورسوم التوصيل يضيفها السيرفر ويطلب تأكيدك لها.' : ''}</p>
@@ -264,11 +264,11 @@ $('#submit').onclick = async () => {
 
   /* رسوم التوصيل يضيفها السيرفر — والعميل يؤكد الرقم الذي رآه قبل أن تقبله المنشأة */
   if (data.awaiting_price_confirmation) {
-    toast('✅ أُنشئ الطلب — تأكيد السعر مطلوب');
+    toast('أُنشئ الطلب — تأكيد السعر مطلوب');
     return priceConfirmStep(data);
   }
 
-  toast('✅ تم إرسال الطلب للمنشأة');
+  toast('تم إرسال الطلب للمنشأة');
   await shareStep(data.code);
 };
 
@@ -301,7 +301,7 @@ function priceConfirmStep(created) {
           if (data?.error === 'price_changed') location.href = orderUrl;
           return;
         }
-        toast('✅ تم تأكيد السعر — الطلب الآن عند المنشأة');
+        toast('تم تأكيد السعر — الطلب الآن عند المنشأة');
         await shareStep(created.code);
       };
       m.querySelector('#price-later').onclick = () => { close(); location.href = orderUrl; };
@@ -318,7 +318,7 @@ async function shareStep(code) {
   const orderUrl = `order.html?code=${encodeURIComponent(code)}`;
 
   modal(`
-    <h3 class="modal-title">✅ تم إنشاء طلبك</h3>
+    <h3 class="modal-title">تم إنشاء طلبك</h3>
     <p class="small muted">رقم الطلب <b dir="ltr">#${esc(code)}</b> — الطلب محفوظ عند المنشأة قبل أي إرسال.</p>
     <div style="border:1px solid var(--line);border-radius:14px;padding:12px;margin:10px 0;background:var(--cream)">
       <div class="between small"><span>الإجمالي</span><span>${sar(share?.subtotal ?? sub)}</span></div>

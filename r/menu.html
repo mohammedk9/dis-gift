@@ -11,7 +11,7 @@
 </head>
 <body>
 <header class="nav"><div class="container nav-inner">
-  <a class="brand" href="./"><span class="brand-mark">🎁</span>
+  <a class="brand" href="./"><span class="brand-mark"><svg class="ico" width="20" height="20" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M9 2c-1.1 0-2 .9-2 2v2h10V4c0-1.1-.9-2-2-2h-6zM4 7v11c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V7H4zm3 4h2v5H7v-5zm4 0h2v5h-2v-5zm4 0h2v5h-2v-5z"/></svg></span>
     <span><span class="brand-name">هدية</span><br><span class="brand-sub">المنيو</span></span></a>
   <span class="nav-spacer"></span>
   <button class="btn btn-primary btn-sm" id="addCat">+ قسم</button>
@@ -43,7 +43,7 @@ const cat = (cats || []).find(c => c.id === wanted) || cats?.[0];
 
 function render() {
   if (!cat) {
-    $('#app').innerHTML = `<div class="empty"><div class="empty-ico">📋</div>
+    $('#app').innerHTML = `<div class="empty"><div class="empty-ico"><svg class="ico" width="40" height="40" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><rect x="4" y="3" width="16" height="18" rx="2" fill="none" stroke="currentColor" stroke-width="2"/><path d="M8 8h8M8 12h8M8 16h5" fill="none" stroke="currentColor" stroke-width="2"/></svg></div>
       <p>أضف قسماً ثم أضف الأصناف.</p>
       <button class="btn btn-primary mt" id="addCat2">+ قسم جديد</button></div>`;
     $('#addCat2').onclick = addCat;

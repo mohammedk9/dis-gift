@@ -484,7 +484,7 @@ begin
                round(it.line_total, 2)::text || ' ر.س' || E'\n';
   end loop;
 
-  v_out := '🎁 ' || p_title || E'\n' ||
+  v_out := p_title || E'\n' ||
            r.name || E'\n' ||
            'رقم الطلب: ' || o.code || E'\n' ||
            to_char(o.created_at at time zone 'Asia/Riyadh', 'YYYY-MM-DD HH24:MI') || E'\n' ||

@@ -11,7 +11,7 @@
 </head>
 <body>
 <header class="nav"><div class="container nav-inner">
-  <a class="brand" href="../index.html"><span class="brand-mark">🎁</span>
+  <a class="brand" href="../index.html"><span class="brand-mark"><svg class="ico" width="20" height="20" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M9 2c-1.1 0-2 .9-2 2v2h10V4c0-1.1-.9-2-2-2h-6zM4 7v11c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V7H4zm3 4h2v5H7v-5zm4 0h2v5h-2v-5zm4 0h2v5h-2v-5z"/></svg></span>
     <span><span class="brand-name">هدية</span><br><span class="brand-sub">الإدارة</span></span></a>
   <span class="nav-spacer"></span>
   <button class="btn btn-ghost btn-sm" id="logout">خروج</button>
@@ -69,11 +69,11 @@ $('#app').innerHTML = `
 
   <h2 class="section-title">مسار التحويل</h2>
   <div class="card">
-    ${[['🎁 هدية مفتوحة', f.gift_open, null],
-       ['👁️ مشاهدة منيو', f.menu_view, f.gift_to_menu],
-       ['🛒 سلة', f.cart_created, f.menu_to_cart],
-       ['📋 طلب', f.order_created, f.cart_to_order],
-       ['✅ طلب مكتمل', f.order_completed, f.order_to_completed]].map(([l, v, r2]) => `
+    ${[['هدية مفتوحة', f.gift_open, null],
+       ['مشاهدة منيو', f.menu_view, f.gift_to_menu],
+       ['سلة', f.cart_created, f.menu_to_cart],
+       ['طلب', f.order_created, f.cart_to_order],
+       ['طلب مكتمل', f.order_completed, f.order_to_completed]].map(([l, v, r2]) => `
       <div class="between" style="padding:7px 0">
         <span class="small">${l}</span>
         <span><b>${v}</b>${r2 !== null ? ` <span class="small muted">(${pct(r2)})</span>` : ''}</span>

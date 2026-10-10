@@ -373,7 +373,7 @@ async function confirmPrice() {
     toast(ORDER_ERRORS[data?.error] || 'تعذّر تأكيد السعر');
     return load();
   }
-  toast('✅ تم تأكيد السعر — الطلب الآن عند المنشأة');
+  toast('تم تأكيد السعر — الطلب الآن عند المنشأة');
   await load();
 }
 
@@ -411,7 +411,7 @@ async function savePhone() {
     return;
   }
   toast(data.phone_shared
-    ? '✅ الرقم مشارَك مع المنشأة لهذا الطلب'
+    ? 'الرقم مشارَك مع المنشأة لهذا الطلب'
     : 'تم سحب مشاركة الرقم — المنشأة لا تراه الآن');
   await load();
 }

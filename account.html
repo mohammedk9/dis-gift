@@ -290,7 +290,7 @@ $('#app').querySelectorAll('.consent-toggle').forEach(b => b.onclick = async () 
     b.disabled = false;
     return toast('تعذّر تحديث الموافقة');
   }
-  toast(data.status === 'granted' ? '✅ تم تسجيل موافقتك' : 'تم سحب الموافقة');
+  toast(data.status === 'granted' ? 'تم تسجيل موافقتك' : 'تم سحب الموافقة');
   setTimeout(() => location.reload(), 700);
 });
 initPWA();

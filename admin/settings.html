@@ -11,7 +11,7 @@
 </head>
 <body>
 <header class="nav"><div class="container nav-inner">
-  <a class="brand" href="./"><span class="brand-mark">🎁</span>
+  <a class="brand" href="./"><span class="brand-mark"><svg class="ico" width="20" height="20" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M9 2c-1.1 0-2 .9-2 2v2h10V4c0-1.1-.9-2-2-2h-6zM4 7v11c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V7H4zm3 4h2v5H7v-5zm4 0h2v5h-2v-5zm4 0h2v5h-2v-5z"/></svg></span>
     <span><span class="brand-name">هدية</span><br><span class="brand-sub">الإعدادات</span></span></a>
 </div></header>
 <div id="tabs"></div>
@@ -45,18 +45,18 @@ $('#app').innerHTML = `
   </div>
 
   <div class="card" style="background:linear-gradient(135deg,#fff6e5,#ffe9d4);border:0">
-    <div style="font-weight:700">💰 رسوم المنصة</div>
-    <p class="small">الرسوم <b>ثابتة على الطلب المكتمل</b> ولا تعتمد على قيمة الطلب.
-      القيمة الحالية <b>${sar(Number(S.platform_fee))}</b>.</p>
-    <div class="field"><label class="label">القيمة (ر.س)</label>
+    <div style="font-weight:700"><svg class="ico" width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden="true"><circle cx="12" cy="12" r="10" fill="none" stroke="currentColor" stroke-width="2"/><path d="M16 8h-6a2 2 0 0 0 0 4h4a2 2 0 0 1 0 4H8M12 6v2M12 16v2" fill="none" stroke="currentColor" stroke-width="2"/></svg> رسوم المنصة</div>
+    <p class="small">الرسوم <b>نسبة من قيمة الطلب المكتمل</b> (بعد استثناء رسوم التوصيل).
+      القيمة الحالية <b>${Number(S.platform_fee) || 0}%</b>.</p>
+    <div class="field"><label class="label">النسبة (%)</label>
       <input class="input" id="s_platform_fee" inputmode="decimal"
         value="${esc(raw('platform_fee'))}"></div>
-    <p class="hint">لم تُحدَّد قيمة في المتطلبات. جرّب أكثر من قيمة وراقب أثرها على استعداد
-      المطاعم للدفع قبل أي قرار.</p>
+    <p class="hint">تُخصم من <b>إجمالي الطلب بعد رسوم التوصيل</b>؛ رسوم التوصيل تُحصَّل للمنشأة كاملة.
+      القيمة 1 تعني 1% من قيمة الطلب.</p>
   </div>
 
   <div class="card mt">
-    <div style="font-weight:700">🎁 إعدادات الهدية</div>
+    <div style="font-weight:700"><svg class="ico" width="18" height="18" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M9 2c-1.1 0-2 .9-2 2v2h10V4c0-1.1-.9-2-2-2h-6zM4 7v11c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V7H4zm3 4h2v5H7v-5zm4 0h2v5h-2v-5zm4 0h2v5h-2v-5z"/></svg> إعدادات الهدية</div>
     <div class="field mt"><label class="label">عدد الهدايا لكل جهاز يومياً</label>
       <input class="input" id="s_gifts_per_day" inputmode="numeric"
         value="${esc(raw('gifts_per_day'))}"></div>
@@ -76,7 +76,7 @@ $('#app').innerHTML = `
       </select></div>
   </div>
 <div class="card mt">
-    <div style="font-weight:700">🎯 حدود الحملات</div>
+    <div style="font-weight:700"><svg class="ico" width="18" height="18" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><circle cx="12" cy="12" r="10" fill="none" stroke="currentColor" stroke-width="2"/><circle cx="12" cy="12" r="6" fill="none" stroke="currentColor" stroke-width="2"/><circle cx="12" cy="12" r="2"/></svg> حدود الحملات</div>
     <div class="row2">
       <div class="field"><label class="label">أدنى خصم مسموح %</label>
         <input class="input" id="s_campaign_discount_min" inputmode="decimal"
@@ -91,7 +91,7 @@ $('#app').innerHTML = `
   </div>
 
   <div class="card mt">
-    <div style="font-weight:700">🛵 رسوم التوصيل</div>
+    <div style="font-weight:700"><svg class="ico" width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden="true"><circle cx="5" cy="18" r="3" fill="none" stroke="currentColor" stroke-width="2"/><circle cx="19" cy="18" r="3" fill="none" stroke="currentColor" stroke-width="2"/><path d="M8 18h8M5 15 8 6h4M14 6h3l2 9" fill="none" stroke="currentColor" stroke-width="2"/></svg> رسوم التوصيل</div>
     <div class="field"><label class="label">الحد الأعلى لرسوم التوصيل (ر.س)</label>
       <input class="input" id="s_delivery_fee_max" inputmode="decimal"
         value="${esc(raw('delivery_fee_max'))}"></div>
@@ -102,7 +102,7 @@ $('#app').innerHTML = `
   </div>
 
   <div class="card mt">
-    <div style="font-weight:700">⭐ النقاط</div>
+    <div style="font-weight:700"><svg class="ico" width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="m12 3 2.6 5.4 5.9.8-4.3 4.1 1 5.9L12 16.5 6.8 19.2l1-5.9-4.3-4.1 5.9-.8z" fill="none" stroke="currentColor" stroke-width="1.8"/></svg> النقاط</div>
     <div class="field"><label class="label">الحد الأعلى المطلق للنقاط على طلب واحد</label>
       <input class="input" id="s_points_hard_cap" inputmode="numeric"
         value="${esc(raw('points_hard_cap'))}"></div>
@@ -114,7 +114,7 @@ $('#app').innerHTML = `
   </div>
 
   <div class="card mt">
-    <div style="font-weight:700">⏱️ الطلبات والمدينة</div>
+    <div style="font-weight:700"><svg class="ico" width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden="true"><circle cx="12" cy="12" r="10" fill="none" stroke="currentColor" stroke-width="2"/><path d="M12 6v6l4 2" fill="none" stroke="currentColor" stroke-width="2"/></svg> الطلبات والمدينة</div>
     <div class="field"><label class="label">مهلة الطلب (دقيقة)</label>
       <input class="input" id="s_order_timeout_minutes" inputmode="numeric"
         value="${esc(raw('order_timeout_minutes'))}"></div>
@@ -178,7 +178,7 @@ async function saveAll() {
   await str('#s_policy_version', 'policy_version');
   await sb.rpc('admin_set_setting',
     { p_key: 'ads_enabled', p_value: $('#s_ads_enabled').checked });
-  toast('✅ تم حفظ الإعدادات');
+  toast('تم حفظ الإعدادات');
 }
 $('#save').onclick = saveAll;
 
@@ -196,7 +196,7 @@ $('#changePassword').onclick = async () => {
 
   $('#newPassword').value = '';
   $('#confirmPassword').value = '';
-  toast('✅ تم تغيير كلمة المرور');
+  toast('تم تغيير كلمة المرور');
 };
 
 async function loadAreas() {
