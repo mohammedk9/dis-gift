@@ -353,6 +353,34 @@
 
   a:focus-visible,button:focus-visible{outline:2px solid var(--orange);outline-offset:3px;border-radius:10px}
 
+  /* ============ INSTALL APP ============ */
+  .install{padding:72px 0 60px;background:linear-gradient(180deg,var(--cream) 0,transparent 100%)}
+  .install-box{border-radius:28px;border:1px solid var(--line);background:#fff;padding:42px;box-shadow:var(--shadow-sm)}
+  .install-header{display:flex;align-items:flex-start;gap:22px;margin-bottom:32px}
+  .install-ico{width:52px;height:52px;border-radius:16px;background:var(--peach);color:var(--orange);display:flex;align-items:center;justify-content:center;flex:none}
+  .install-head-copy h2{margin:0 0 4px;font-size:clamp(20px,2vw,26px);font-weight:700;line-height:1.3}
+  .install-head-copy p{margin:0;color:var(--muted);font-size:15px;line-height:1.6}
+  .install-tabs{display:flex;gap:4px;margin-bottom:28px;border-bottom:1px solid var(--line);padding-bottom:0}
+  .install-tab{border:none;background:transparent;color:var(--muted);font-size:14.5px;font-weight:600;padding:12px 18px;cursor:pointer;border-bottom:2px solid transparent;transition:.2s;font-family:inherit}
+  .install-tab:hover{color:var(--orange-text)}
+  .install-tab.active{color:var(--orange);border-bottom-color:var(--orange)}
+  .install-panes{min-height:200px}
+  .install-pane{display:none}
+  .install-pane.active{display:block;animation:fadeIn .3s}
+  @keyframes fadeIn{from{opacity:0;transform:translateY(4px)}to{opacity:1;transform:translateY(0)}}
+  .install-steps{list-style:none;padding:0;margin:0;display:flex;flex-direction:column;gap:18px}
+  .install-steps li{display:flex;flex-direction:column;gap:6px;font-size:15px;line-height:1.6;color:var(--ink)}
+  .install-steps li b{color:var(--orange-text);font-weight:600;display:block}
+  .install-steps li span{color:var(--muted);font-size:14px}
+  @media (max-width:760px){
+    .install-box{padding:28px;border-radius:20px}
+    .install-header{flex-direction:column;gap:14px;margin-bottom:22px}
+    .install-head-copy h2{font-size:20px}
+    .install-tabs{flex-wrap:wrap}
+    .install-tab{padding:10px 14px;font-size:13.5px}
+  }
+
+
   /* ============ RESPONSIVE ============ */
   @media (max-width:1024px){
     .hero-grid{gap:48px;justify-content:center}
@@ -677,6 +705,53 @@
   </div>
 </section>
 
+<!-- ================= INSTALL APP ================= -->
+<section class="install" id="installSection">
+  <div class="container">
+    <div class="install-box">
+      <div class="install-header">
+        <div class="install-ico" aria-hidden="true">
+          <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12"/><path d="M7 10l5 5 5-5"/><path d="M5 21h14"/></svg>
+        </div>
+        <div class="install-head-copy">
+          <h2>ثبّت «هدية» كتطبيق على جهازك</h2>
+          <p>استخدمه كتطبيق كامل: أيقونة على شاشتك، وفتح أسرع، وتجربة بلا متصفح.</p>
+        </div>
+      </div>
+
+      <div class="install-tabs" role="tablist" aria-label="طريقة التثبيت حسب الجهاز">
+        <button class="install-tab active" data-tab="android" type="button" role="tab" aria-selected="true">أندرويد</button>
+        <button class="install-tab" data-tab="ios" type="button" role="tab" aria-selected="false">آيفون / آيباد</button>
+        <button class="install-tab" data-tab="desktop" type="button" role="tab" aria-selected="false">حاسوب</button>
+      </div>
+
+      <div class="install-panes">
+        <div class="install-pane active" data-pane="android">
+          <ol class="install-steps">
+            <li><b>افتح الموقع في Chrome.</b><span>من الجوال أو الجهاز اللوحي.</span></li>
+            <li><b>انتظر شريط التثبيت.</b><span>يظهر تلقائياً أسفل الشاشة، أو اضغط القائمة (⋮) ثم «تثبيت التطبيق / إضافة إلى الشاشة الرئيسية».</span></li>
+            <li><b>اضغط «تثبيت».</b><span>ستُضاف أيقونة «هدية» إلى شاشتك الرئيسية فوراً.</span></li>
+          </ol>
+        </div>
+        <div class="install-pane" data-pane="ios">
+          <ol class="install-steps">
+            <li><b>افتح الموقع في Safari.</b><span>التثبيت على آيفون يعمل من Safari.</span></li>
+            <li><b>اضغط زر المشاركة.</b><span>المربّع مع سهم للأعلى أسفل الشاشة.</span></li>
+            <li><b>اختر «إضافة إلى الشاشة الرئيسية».</b><span>ثم اضغط «إضافة» في الأعلى.</span></li>
+          </ol>
+        </div>
+        <div class="install-pane" data-pane="desktop">
+          <ol class="install-steps">
+            <li><b>افتح الموقع في Chrome أو Edge.</b><span>على الحاسوب.</span></li>
+            <li><b>اضغط أيقونة التثبيت.</b><span>تظهر داخل شريط العنوان (شاشة صغيرة مع سهم).</span></li>
+            <li><b>اختر «تثبيت».</b><span>سيفتح «هدية» في نافذة مستقلة كتطبيق.</span></li>
+          </ol>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
 <!-- ================= BUSINESS CTA ================= -->
 <section class="biz">
   <div class="container">
@@ -770,6 +845,37 @@
   document.addEventListener('keydown', event => {
     if (event.key === 'Escape' && !accountMenu.hidden) closeAccountMenu(true);
   });
+  /* ---------- قسم تعليمات التثبيت: تبويبات حسب الجهاز ---------- */
+  const installTabs = [...document.querySelectorAll('.install-tab')];
+  const installPanes = [...document.querySelectorAll('.install-pane')];
+  installTabs.forEach(tab => {
+    tab.addEventListener('click', () => {
+      const name = tab.dataset.tab;
+      installTabs.forEach(t => {
+        const on = t === tab;
+        t.classList.toggle('active', on);
+        t.setAttribute('aria-selected', on ? 'true' : 'false');
+      });
+      installPanes.forEach(p => p.classList.toggle('active', p.dataset.pane === name));
+    });
+  });
+  /* اختيار الجهاز الافتراضي تلقائياً لتقليل خطوات المستخدم. */
+  (() => {
+    const ua = navigator.userAgent || '';
+    const isIOS = /iPad|iPhone|iPod/.test(ua) || (/Macintosh/.test(ua) && 'ontouchend' in document);
+    const isAndroid = /Android/.test(ua);
+    const guess = isIOS ? 'ios' : (isAndroid ? 'android' : 'desktop');
+    const btn = installTabs.find(t => t.dataset.tab === guess);
+    btn?.click();
+  })();
+
+  /* تسجيل Service Worker من الصفحة الرئيسية أيضاً (بقية الصفحات تفعل ذلك عبر initPWA). */
+  if ('serviceWorker' in navigator && (location.protocol === 'https:' || location.hostname === 'localhost')) {
+    window.addEventListener('load', () => {
+      navigator.serviceWorker.register('sw.js').catch(() => {});
+    });
+  }
+
 </script>
 <script src="assets/js/runtime-config-live.js"></script>
 <script src="assets/js/vendor/supabase.js"></script>
