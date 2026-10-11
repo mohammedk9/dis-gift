@@ -40,7 +40,8 @@ for (const page of pages) {
 }
 
 for (const f of ['assets/js/core.js', 'assets/js/ui.js',
-  'assets/js/auth-flows.js', 'assets/js/whatsapp.js', 'assets/js/barcode.js']) {
+  'assets/js/auth-flows.js', 'assets/js/whatsapp.js', 'assets/js/barcode.js',
+  'assets/js/public-offers.js']) {
   if (fs.existsSync(f)) syntaxCheck(fs.readFileSync(f, 'utf8'), f);
 }
 

@@ -36,13 +36,15 @@
 <script src="assets/js/runtime-config-live.js"></script>
 <script src="assets/js/vendor/supabase.js"></script>
 <script type="module">
-import { sb, actorId, areaId, setArea, getGift, setGift, sar } from './assets/js/core.js';
+import { sb, actorId, areaId, setArea, getGift, setGift, sar, adoptIdentity } from './assets/js/core.js';
 import { $, esc, toast, modal, requireConfig, customerNav, initPWA, guardCustomer } from './assets/js/ui.js';
+import { loadPublicOffers } from './assets/js/public-offers.js';
 
 $('#nav').innerHTML = customerNav('gift');
 if (!requireConfig()) throw new Error('not configured');
-/* كود الهدية لا يظهر إلا لصاحب حساب — الزائر يُحوَّل إلى الدخول */
-if (!await guardCustomer()) throw new Error('redirecting');
+/* الزائر المجهول يرى العروض والزر؛ قيمة الهدية وكودها يظهران لصاحب حساب فقط،
+   وطلب الفتح (open_daily_gift) يحتاج حساباً — يُفرض عند الضغط على الزر. */
+await adoptIdentity().catch(() => null);
 
 let areas = [];
 const stage = $('#stage');
@@ -83,6 +85,8 @@ function stageClosed() {
         <button class="btn btn-lg" id="openBtn"
           style="background:#fff;color:var(--orange-deep)">افتح هديتك</button>
         <p style="margin:16px 0 0;font-size:11.5px;opacity:.85">هدية واحدة يومياً لكل جهاز</p>
+        <!-- العروض النشطة يُراها الزائر أيضاً — بلا قيمة ولا كود. -->
+        <div class="gc-offers" id="gcOffers" hidden></div>
       </div>
     </div>
 
@@ -185,6 +189,8 @@ async function render() {
   if (cached) { stage.innerHTML = stageOpened(cached); wire(cached); return; }
   stage.innerHTML = stageClosed();
   $('#openBtn').onclick = open;
+  /* العروض عامة: تظهر للزائر قبل الدخول، وتُخفي نفسها إن لا عروض. */
+  loadPublicOffers('gcOffers');
 }
 
 const redirectToLogin = () => location.replace(
@@ -200,6 +206,9 @@ async function open() {
   const btn = $('#openBtn');
   btn.disabled = true;
   btn.innerHTML = '<span class="spin"></span> جارٍ الفتح…';
+  /* لا كود ولا هدية لزائر: guardCustomer يُعيده إلى الدخول إن لم يكن مسجّلاً. */
+  const session = await guardCustomer();
+  if (!session) return;
   const { data, error } = await sb.rpc('open_daily_gift', {
     p_device: actorId(), p_area: areaId()
   });
